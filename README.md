@@ -1,61 +1,53 @@
-# Dynamic Home Buyer Landing Page Demo
+# DynLander Static Demo - Fixed Admin Version
 
-This is a static demo for a home buyer / "We Buy Houses" marketing campaign.
+This repo is a static HTML/CSS/JavaScript demo. It is **not** a Next.js app.
 
-It shows how one landing page can change based on Google Ads URL parameters.
+The earlier admin files were added under `app/admin/page.tsx`, which only works in a real Next.js App Router project. Because this repo does not include `package.json`, `next.config.ts`, or a real `app/layout.tsx`, those files are ignored by the deployed site and `/admin` returns 404.
 
-## Demo URLs
+## Fixed pages
 
-Open these files in a browser or upload the folder to any static host.
+Public landing page:
 
-- `index.html?theme=fast&city=Plano&utm_campaign=fast-sale&utm_source=google&utm_medium=cpc`
-- `index.html?theme=repairs&city=Frisco&utm_campaign=as-is-repairs&utm_source=google&utm_medium=cpc`
-- `index.html?theme=inherited&city=Dallas&utm_campaign=inherited-house&utm_source=google&utm_medium=cpc`
-- `index.html?theme=foreclosure&city=McKinney&utm_campaign=foreclosure-options&utm_source=google&utm_medium=cpc`
-- `index.html?theme=landlord&city=Fort%20Worth&utm_campaign=tired-landlord&utm_source=google&utm_medium=cpc`
+```text
+/
+```
 
-## What changes
+Admin pages:
 
-The page changes these areas based on the `theme` and `city` parameters:
+```text
+/admin/
+/admin/themes/
+/admin/url-builder/
+/admin/leads/
+```
 
-- Hero headline
-- Subheadline
-- CTA button
-- Form intro
-- Problem section
-- Benefits
-- FAQ section
-- Mock chat opening message
-- Tracking line
+## Demo landing page URLs
 
-## Dashboard
+```text
+/?theme=fast&city=Plano&utm_campaign=fast-sale&utm_source=google&utm_medium=cpc
+/?theme=repairs&city=Frisco&utm_campaign=as-is-repairs&utm_source=google&utm_medium=cpc
+/?theme=inherited&city=Dallas&utm_campaign=inherited-house&utm_source=google&utm_medium=cpc
+/?theme=foreclosure&city=McKinney&utm_campaign=foreclosure-options&utm_source=google&utm_medium=cpc
+/?theme=landlord&city=Fort%20Worth&utm_campaign=tired-landlord&utm_source=google&utm_medium=cpc
+```
 
-Open `dashboard.html` to see:
+## What to delete from GitHub
 
-- Demo visits by theme
-- Demo leads by theme
-- Demo leads captured from the form
-- Test URL links
-- Simple AI-style recommendations
+Delete these old folders/files because they are for a Next.js patch and do not work in this static repo:
 
-The demo uses browser `localStorage`, so data is saved only in the browser you use for testing.
+```text
+app/
+src/
+components/
+lib/
+README-DYNLANDER-ADMIN-FIX.md
+README-DYNLANDER-ADMIN-PATCH.md
+```
 
 ## SQL migration needed
 
 No.
 
-## Vercel environment variables needed
+## Vercel ENV needed
 
 No.
-
-## Production build note
-
-This is a front-end demo only. A production version should add:
-
-- Real database storage
-- Admin login
-- Multi-client setup
-- Google Ads API / cost import
-- CRM/email/SMS lead forwarding
-- Domain/client configuration
-- Conversion tracking
