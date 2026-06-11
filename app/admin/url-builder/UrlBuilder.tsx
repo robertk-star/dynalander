@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { dynlanderThemes } from '../../../lib/dynlanderAdminData';
-import { cardStyle, gridStyle, inputStyle, labelStyle } from '../../../components/dynlander-admin/AdminShell';
+import { blueButtonStyle, cardStyle, gridStyle, inputStyle, labelStyle, twoColumnStyle } from '../_components/adminStyles';
+import { dynlanderThemes } from '../_data/dynlanderAdminData';
 
 export default function UrlBuilder() {
   const [baseUrl, setBaseUrl] = useState('https://dynlander.com/sell');
@@ -28,7 +28,7 @@ export default function UrlBuilder() {
   }, [baseUrl, theme, city, campaign, keyword, device, matchtype]);
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+    <div style={twoColumnStyle}>
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Build URL</h2>
         <div style={{ display: 'grid', gap: 14 }}>
@@ -39,18 +39,19 @@ export default function UrlBuilder() {
           </div>
           <label style={labelStyle}>Campaign<input style={inputStyle} value={campaign} onChange={(e) => setCampaign(e.target.value)} /></label>
           <div style={gridStyle}>
-            <label style={labelStyle}>Keyword<input style={inputStyle} value={keyword} onChange={(e) => setKeyword(e.target.value)} /></label>
-            <label style={labelStyle}>Device<input style={inputStyle} value={device} onChange={(e) => setDevice(e.target.value)} /></label>
-            <label style={labelStyle}>Match Type<input style={inputStyle} value={matchtype} onChange={(e) => setMatchtype(e.target.value)} /></label>
+            <label style={labelStyle}>Keyword ValueTrack<input style={inputStyle} value={keyword} onChange={(e) => setKeyword(e.target.value)} /></label>
+            <label style={labelStyle}>Device ValueTrack<input style={inputStyle} value={device} onChange={(e) => setDevice(e.target.value)} /></label>
+            <label style={labelStyle}>Match Type ValueTrack<input style={inputStyle} value={matchtype} onChange={(e) => setMatchtype(e.target.value)} /></label>
           </div>
         </div>
       </section>
 
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Final URL</h2>
-        <textarea readOnly value={finalUrl} style={{ ...inputStyle, minHeight: 170, fontFamily: 'monospace' }} />
-        <p style={{ color: '#64748b' }}>Copy this into Google Ads as the final URL for an ad or ad group. The landing page can read these parameters and change the page message.</p>
-        <a href={finalUrl.replace('https://dynlander.com', '')} style={{ display: 'inline-block', background: '#2563eb', color: '#fff', textDecoration: 'none', borderRadius: 10, padding: '12px 16px', fontWeight: 700 }}>Preview local URL</a>
+        <textarea readOnly style={{ ...inputStyle, minHeight: 160, fontFamily: 'monospace' }} value={finalUrl} />
+        <div style={{ height: 12 }} />
+        <a href={finalUrl.replace('https://dynlander.com', '')} style={blueButtonStyle}>Preview Local Page</a>
+        <p style={{ color: '#64748b' }}>In production, this URL would be copied into Google Ads as the final URL.</p>
       </section>
     </div>
   );

@@ -1,11 +1,12 @@
-import AdminShell, { cardStyle, tableStyle, thTdStyle } from '../../../components/dynlander-admin/AdminShell';
-import { dynlanderDemoLeads } from '../../../lib/dynlanderAdminData';
+import AdminShell from '../_components/AdminShell';
+import { cardStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
+import { dynlanderDemoLeads } from '../_data/dynlanderAdminData';
 
 export default function DynLanderLeadsPage() {
   return (
     <AdminShell
       title="Lead Dashboard"
-      subtitle="Review seller leads by source, city, theme, status, and created date. This patch uses mock leads only."
+      subtitle="Review seller leads by source, city, theme, status, and created date. This demo uses mock leads only."
     >
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Captured seller leads</h2>

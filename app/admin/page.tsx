@@ -1,5 +1,6 @@
-import AdminShell, { cardStyle, gridStyle, tableStyle, thTdStyle } from '../../components/dynlander-admin/AdminShell';
-import { dynlanderDemoLeads, dynlanderThemePerformance } from '../../lib/dynlanderAdminData';
+import AdminShell from './_components/AdminShell';
+import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from './_components/adminStyles';
+import { dynlanderDemoLeads, dynlanderThemePerformance } from './_data/dynlanderAdminData';
 
 export default function DynLanderAdminPage() {
   const totalClicks = dynlanderThemePerformance.reduce((sum, row) => sum + row.clicks, 0);
@@ -9,8 +10,8 @@ export default function DynLanderAdminPage() {
   return (
     <AdminShell
       title="DynLander Admin"
-      subtitle="Manage dynamic landing pages, seller-intent themes, Google Ads URLs, and home-buyer lead reporting. This patch uses mock data and does not change the public landing page."
-      action={<a href="/admin/url-builder" style={{ background: '#2563eb', color: '#fff', textDecoration: 'none', borderRadius: 10, padding: '12px 16px', fontWeight: 700 }}>Build Ad URL</a>}
+      subtitle="Manage dynamic landing pages, seller-intent themes, Google Ads URLs, and home-buyer lead reporting. This demo uses mock data."
+      action={<a href="/admin/url-builder" style={blueButtonStyle}>Build Ad URL</a>}
     >
       <div style={gridStyle}>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Total clicks</div><strong style={{ fontSize: 34 }}>{totalClicks}</strong></div>
@@ -19,15 +20,21 @@ export default function DynLanderAdminPage() {
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Best theme</div><strong style={{ fontSize: 34 }}>Repairs</strong></div>
       </div>
 
-      <section style={{ ...cardStyle, marginBottom: 18 }}>
+      <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Theme performance</h2>
         <table style={tableStyle}>
-          <thead><tr><th style={thTdStyle}>Theme</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>Leads</th><th style={thTdStyle}>Conversion</th><th style={thTdStyle}>Demo CPL</th></tr></thead>
-          <tbody>{dynlanderThemePerformance.map((row) => <tr key={row.theme}><td style={thTdStyle}>{row.theme}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.conversion}</td><td style={thTdStyle}>{row.cpl}</td></tr>)}</tbody>
+          <thead>
+            <tr><th style={thTdStyle}>Theme</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>Leads</th><th style={thTdStyle}>Conversion</th><th style={thTdStyle}>Demo CPL</th></tr>
+          </thead>
+          <tbody>
+            {dynlanderThemePerformance.map((row) => (
+              <tr key={row.theme}><td style={thTdStyle}>{row.theme}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.conversion}</td><td style={thTdStyle}>{row.cpl}</td></tr>
+            ))}
+          </tbody>
         </table>
       </section>
 
-      <section style={{ ...cardStyle, marginBottom: 18 }}>
+      <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>AI-style recommendations</h2>
         <div style={gridStyle}>
           <div><strong>Scale repairs theme</strong><p style={{ color: '#64748b' }}>Repairs / as-is has the highest lead count and should get more budget or more ad variants.</p></div>

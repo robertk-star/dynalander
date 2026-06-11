@@ -1,4 +1,4 @@
-import AdminShell from '../../../components/dynlander-admin/AdminShell';
+import AdminShell from '../_components/AdminShell';
 import UrlBuilder from './UrlBuilder';
 
 export default function DynLanderUrlBuilderPage() {

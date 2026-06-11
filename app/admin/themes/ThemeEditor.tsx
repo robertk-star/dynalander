@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { dynlanderThemes } from '../../../lib/dynlanderAdminData';
-import { cardStyle, gridStyle, inputStyle, labelStyle } from '../../../components/dynlander-admin/AdminShell';
+import { cardStyle, gridStyle, inputStyle, labelStyle, twoColumnStyle } from '../_components/adminStyles';
+import { dynlanderThemes } from '../_data/dynlanderAdminData';
 
 export default function ThemeEditor() {
-  const [selectedId, setSelectedId] = useState(dynlanderThemes[1].id);
+  const [selectedId, setSelectedId] = useState('repairs');
   const selected = dynlanderThemes.find((theme) => theme.id === selectedId) || dynlanderThemes[0];
   const [draft, setDraft] = useState(selected);
 
@@ -16,7 +16,7 @@ export default function ThemeEditor() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 18 }}>
+    <div style={twoColumnStyle}>
       <aside style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Seller themes</h2>
         <div style={{ display: 'grid', gap: 10 }}>
@@ -42,7 +42,7 @@ export default function ThemeEditor() {
         <label style={labelStyle}>Chat Opening<textarea style={{ ...inputStyle, minHeight: 80 }} value={draft.chatOpening} onChange={(e) => setDraft({ ...draft, chatOpening: e.target.value })} /></label>
         <div style={{ height: 14 }} />
         <label style={labelStyle}>FAQ Answer<textarea style={{ ...inputStyle, minHeight: 80 }} value={draft.faq1} onChange={(e) => setDraft({ ...draft, faq1: e.target.value })} /></label>
-        <p style={{ color: '#64748b' }}>Demo note: saving is disabled in this admin-only patch. Production would save these edits to Supabase.</p>
+        <p style={{ color: '#64748b' }}>Demo note: these edits are not saved to a database yet.</p>
       </section>
     </div>
   );
