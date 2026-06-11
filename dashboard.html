@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dynamic Landing Page Demo Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="top-strip">
+    <span>Demo Dashboard</span>
+    <a href="index.html?theme=fast&city=Plano&utm_campaign=fast-sale&utm_source=google&utm_medium=cpc">Back to Landing Page</a>
+  </div>
+
+  <header class="site-header dashboard-header">
+    <div>
+      <h1>Seller Intent Landing Page Engine</h1>
+      <p>Mock dashboard showing how a home buyer agency could track ad-to-page message match.</p>
+    </div>
+  </header>
+
+  <main class="dashboard-main">
+    <section class="metric-grid">
+      <div class="metric"><span>Total demo visits</span><strong id="visitsCount">0</strong></div>
+      <div class="metric"><span>Demo leads</span><strong id="leadsCount">0</strong></div>
+      <div class="metric"><span>Top theme</span><strong id="topTheme">—</strong></div>
+      <div class="metric"><span>Top city</span><strong id="topCity">—</strong></div>
+    </section>
+
+    <section class="section dashboard-card">
+      <h2>Test URLs for Friday Demo</h2>
+      <p>Click each URL to show how the page changes based on ad theme and city.</p>
+      <div class="url-list">
+        <a href="index.html?theme=fast&city=Plano&utm_campaign=fast-sale&utm_source=google&utm_medium=cpc">Sell fast in Plano</a>
+        <a href="index.html?theme=repairs&city=Frisco&utm_campaign=as-is-repairs&utm_source=google&utm_medium=cpc">Repairs / as-is in Frisco</a>
+        <a href="index.html?theme=inherited&city=Dallas&utm_campaign=inherited-house&utm_source=google&utm_medium=cpc">Inherited house in Dallas</a>
+        <a href="index.html?theme=foreclosure&city=McKinney&utm_campaign=foreclosure-options&utm_source=google&utm_medium=cpc">Foreclosure concern in McKinney</a>
+        <a href="index.html?theme=landlord&city=Fort%20Worth&utm_campaign=tired-landlord&utm_source=google&utm_medium=cpc">Tired landlord in Fort Worth</a>
+      </div>
+    </section>
+
+    <section class="section dashboard-card">
+      <h2>Theme Performance</h2>
+      <table>
+        <thead><tr><th>Theme</th><th>Demo visits</th><th>Demo leads</th><th>Message angle</th></tr></thead>
+        <tbody id="themeTable"></tbody>
+      </table>
+    </section>
+
+    <section class="section dashboard-card">
+      <h2>Captured Demo Leads</h2>
+      <table>
+        <thead><tr><th>Date</th><th>Name</th><th>Phone</th><th>Theme</th><th>City</th><th>Campaign</th></tr></thead>
+        <tbody id="leadTable"></tbody>
+      </table>
+    </section>
+
+    <section class="section dashboard-card">
+      <h2>AI-style recommendations</h2>
+      <div class="recommendations" id="recommendations"></div>
+    </section>
+  </main>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

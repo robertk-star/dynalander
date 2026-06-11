@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dynamic Seller Landing Page Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="top-strip">
+    <span id="demoLabel">Dynamic Home Buyer Landing Page Demo</span>
+    <a href="dashboard.html">View Demo Dashboard</a>
+  </div>
+
+  <header class="site-header">
+    <div class="brand">
+      <div class="brand-mark">CO</div>
+      <div>
+        <strong id="businessName">Cash Offer Demo</strong>
+        <span id="serviceArea">Local home buyers</span>
+      </div>
+    </div>
+    <a class="phone" href="tel:5555551212">Call: (555) 555-1212</a>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="pill" id="intentPill">Seller Intent: Fast Sale</div>
+        <h1 id="heroHeadline">Need to Sell Your House Fast?</h1>
+        <p id="heroSubheadline">Request a simple cash offer and choose a closing date that works for you.</p>
+        <div class="hero-actions">
+          <a href="#leadForm" class="primary-button" id="mainCta">Get My Cash Offer</a>
+          <a href="#howItWorks" class="secondary-button">How it works</a>
+        </div>
+        <div class="trust-row">
+          <span>No repairs</span>
+          <span>No showings</span>
+          <span>No obligation</span>
+        </div>
+      </div>
+
+      <form class="lead-card" id="leadForm">
+        <h2 id="formTitle">Tell us about the house</h2>
+        <p id="formIntro">Share a few details and we will follow up with next steps.</p>
+        <label>
+          Name
+          <input name="name" placeholder="Your name" required />
+        </label>
+        <label>
+          Phone
+          <input name="phone" placeholder="Best phone number" required />
+        </label>
+        <label>
+          Property city
+          <input name="property_city" id="propertyCityInput" placeholder="City" />
+        </label>
+        <label>
+          What best describes your situation?
+          <select name="reason" id="reasonSelect">
+            <option value="fast">Need to sell fast</option>
+            <option value="repairs">House needs repairs</option>
+            <option value="inherited">Inherited property</option>
+            <option value="foreclosure">Behind on payments / foreclosure concern</option>
+            <option value="landlord">Rental property / tired landlord</option>
+          </select>
+        </label>
+        <button type="submit" id="formButton">Request My Cash Offer</button>
+        <small id="trackingLine">Tracking: theme=fast, city=Local</small>
+      </form>
+    </section>
+
+    <section class="section grid-two" id="howItWorks">
+      <div>
+        <h2 id="problemHeadline">A simpler way to sell</h2>
+        <p id="problemCopy">If you want to avoid repairs, showings, and a long listing process, a cash offer may be worth reviewing.</p>
+      </div>
+      <div class="steps">
+        <div><strong>1. Tell us about the house</strong><span>Share the property location, condition, and timeline.</span></div>
+        <div><strong>2. Review your options</strong><span>We look at the property and follow up with possible next steps.</span></div>
+        <div><strong>3. Choose what works</strong><span>If the offer makes sense, you can choose a closing date.</span></div>
+      </div>
+    </section>
+
+    <section class="section benefits">
+      <h2 id="benefitsHeadline">Why sellers use this option</h2>
+      <div class="benefit-grid" id="benefitGrid"></div>
+    </section>
+
+    <section class="section faq-section">
+      <h2>Questions sellers often ask</h2>
+      <div id="faqList" class="faq-list"></div>
+    </section>
+  </main>
+
+  <aside class="chat-box" id="chatBox">
+    <div class="chat-header">
+      <strong>AI Seller Assistant</strong>
+      <button id="chatClose" aria-label="Close chat">×</button>
+    </div>
+    <p id="chatMessage">Hi, I can help you request a cash offer. What city is the property in?</p>
+    <div class="chat-buttons">
+      <button>Ask a question</button>
+      <button>Start offer request</button>
+    </div>
+  </aside>
+
+  <div class="toast" id="toast">Demo lead captured. Open dashboard to view tracking.</div>
+
+  <script src="script.js"></script>
+</body>
+</html>
