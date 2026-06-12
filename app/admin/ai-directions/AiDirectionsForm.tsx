@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, inputStyle, labelStyle, twoColumnStyle } from '../_components/adminStyles';
+import { useActiveAccount } from '../_components/useActiveAccount';
 
-const storageKey = 'dynlander-ai-directions';
+const storageKeyBase = 'dynlander-ai-directions';
 
 const defaultDirections = {
   monthlyBudget: '1000',
@@ -17,20 +18,28 @@ const defaultDirections = {
 
 type Directions = typeof defaultDirections;
 
+function storageKey(accountId: string) {
+  return `${storageKeyBase}:${accountId}`;
+}
+
 export default function AiDirectionsForm() {
+  const { accountId, selectedAccount } = useActiveAccount();
   const [directions, setDirections] = useState<Directions>(defaultDirections);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    const savedValue = window.localStorage.getItem(storageKey);
+    const savedValue = window.localStorage.getItem(storageKey(accountId));
     if (savedValue) {
       try {
         setDirections({ ...defaultDirections, ...JSON.parse(savedValue) });
       } catch {
         setDirections(defaultDirections);
       }
+    } else {
+      setDirections(defaultDirections);
     }
-  }, []);
+    setSaved(false);
+  }, [accountId]);
 
   function updateField(field: keyof Directions, value: string) {
     setDirections((current) => ({ ...current, [field]: value }));
@@ -38,22 +47,22 @@ export default function AiDirectionsForm() {
   }
 
   function saveDirections() {
-    window.localStorage.setItem(storageKey, JSON.stringify(directions));
+    window.localStorage.setItem(storageKey(accountId), JSON.stringify(directions));
     setSaved(true);
   }
 
   function resetDirections() {
     setDirections(defaultDirections);
-    window.localStorage.setItem(storageKey, JSON.stringify(defaultDirections));
+    window.localStorage.setItem(storageKey(accountId), JSON.stringify(defaultDirections));
     setSaved(true);
   }
 
   return (
     <>
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>AI guardrails</h2>
+        <h2 style={{ marginTop: 0 }}>AI guardrails for {selectedAccount.name}</h2>
         <p style={{ color: '#64748b', lineHeight: 1.5 }}>
-          These are the instructions DynLander should read before creating recommendations. In this demo they save in your browser. Later they should save per client account in the database.
+          These directions are saved separately for the active account in this demo. Later they should save per client account in the database.
         </p>
         <div style={gridStyle}>
           <label style={labelStyle}>
@@ -69,7 +78,7 @@ export default function AiDirectionsForm() {
           <button type="button" onClick={saveDirections} style={blueButtonStyle}>Save AI Directions</button>
           <button type="button" onClick={resetDirections} style={{ ...blueButtonStyle, background: '#334155' }}>Reset Demo Defaults</button>
         </div>
-        {saved ? <p style={{ color: '#166534', fontWeight: 800 }}>Saved. The Google Ads dashboard will now show these guardrails.</p> : null}
+        {saved ? <p style={{ color: '#166534', fontWeight: 800 }}>Saved for {selectedAccount.name}. The Google Ads dashboard will now show these account-specific guardrails.</p> : null}
       </section>
 
       <section style={twoColumnStyle}>
