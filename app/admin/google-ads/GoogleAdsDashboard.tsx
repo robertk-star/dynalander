@@ -15,7 +15,7 @@ import {
   getAccountSearchTerms
 } from '../_data/accountScopedData';
 
-const storageKey = 'dynlander-ai-directions';
+const storageKeyBase = 'dynlander-ai-directions';
 const defaultDirections = {
   monthlyBudget: '1000',
   targetCpl: '100',
@@ -27,6 +27,10 @@ const defaultDirections = {
 };
 
 type Directions = typeof defaultDirections;
+
+function storageKey(accountId: string) {
+  return `${storageKeyBase}:${accountId}`;
+}
 
 const buttonStyle = (active: boolean) => ({
   border: active ? '1px solid #2563eb' : '1px solid #cbd5e1',
@@ -72,15 +76,17 @@ export default function GoogleAdsDashboard() {
   const budgetReview = getAccountBudgetReview(accountId);
 
   useEffect(() => {
-    const savedValue = window.localStorage.getItem(storageKey);
+    const savedValue = window.localStorage.getItem(storageKey(accountId));
     if (savedValue) {
       try {
         setDirections({ ...defaultDirections, ...JSON.parse(savedValue) });
       } catch {
         setDirections(defaultDirections);
       }
+    } else {
+      setDirections(defaultDirections);
     }
-  }, []);
+  }, [accountId]);
 
   return (
     <>
@@ -106,7 +112,7 @@ export default function GoogleAdsDashboard() {
       </section>
 
       <section style={{ ...cardStyle, border: '1px solid #fde68a', background: '#fffbeb' }}>
-        <SectionTitle title="AI directions being applied" description="These guardrails come from the AI Directions page. The recommendation engine should read these before creating advice." />
+        <SectionTitle title="AI directions being applied" description="These guardrails come from the AI Directions page for the active account." />
         <div style={gridStyle}>
           <div><strong>Max monthly budget</strong><p style={{ color: '#475569' }}>${directions.monthlyBudget}</p></div>
           <div><strong>Target CPL</strong><p style={{ color: '#475569' }}>${directions.targetCpl}</p></div>
