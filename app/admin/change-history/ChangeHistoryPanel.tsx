@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
+import { useActivePlatform } from '../_components/useActivePlatform';
+import MetaChangeHistoryPanel from './MetaChangeHistoryPanel';
 
 type ChangeRow = {
   id: string;
@@ -32,6 +34,7 @@ function getReviewStatus(row: ChangeRow) {
 }
 
 export default function ChangeHistoryPanel() {
+  const { platform } = useActivePlatform();
   const { accountId, selectedAccount } = useActiveAccount();
   const [data, setData] = useState<ChangeResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,10 @@ export default function ChangeHistoryPanel() {
 
   useEffect(() => { loadChanges(); }, [accountId]);
 
+  if (platform === 'meta_ads') {
+    return <MetaChangeHistoryPanel />;
+  }
+
   const changes = data?.changes ?? [];
   const readyCount = changes.filter((row) => getReviewStatus(row) === 'Ready for review').length;
   const watchingCount = changes.length - readyCount;
@@ -56,6 +63,7 @@ export default function ChangeHistoryPanel() {
   const urlCount = changes.filter((row) => row.asset_type === 'final_url').length;
 
   const cards = [
+    { label: 'Platform', value: 'Google Ads', note: 'Showing Google mock change history.' },
     { label: 'Active account', value: selectedAccount.name, note: 'Change history is scoped to the selected account.' },
     { label: 'Detected changes', value: String(changes.length), note: data?.ok ? 'Rows loaded from ad_change_log.' : data?.error || 'No data loaded yet.' },
     { label: 'Watching', value: String(watchingCount), note: 'Waiting for enough time or data before review.' },
@@ -67,16 +75,16 @@ export default function ChangeHistoryPanel() {
   return (
     <>
       <section style={{ ...cardStyle, border: '2px solid #0f766e', background: '#f0fdfa' }}>
-        <h2 style={{ marginTop: 0 }}>Change history</h2>
+        <h2 style={{ marginTop: 0 }}>Google change history</h2>
         <p style={{ color: '#115e59', fontWeight: 800, lineHeight: 1.6 }}>
-          This page shows detected changes from saved snapshots. Today these are mock snapshot changes. Later this same page will show live Google Ads changes after real snapshots are saved.
+          This page shows detected changes from saved Google mock snapshots. Later this same page will show live Google Ads changes after real snapshots are saved.
         </p>
       </section>
 
       <div style={gridStyle}>{cards.map((card) => <div key={card.label} style={cardStyle}><div style={{ color: '#64748b' }}>{card.label}</div><strong style={{ fontSize: 24 }}>{loading ? 'Loading...' : card.value}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{card.note}</p></div>)}</div>
 
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Detected changes</h2>
+        <h2 style={{ marginTop: 0 }}>Detected Google changes</h2>
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -103,7 +111,7 @@ export default function ChangeHistoryPanel() {
             ))}
           </tbody>
         </table>
-        {!loading && changes.length === 0 ? <p style={{ color: '#64748b' }}>No detected changes yet. Use Snapshot Preview to save a normal snapshot, save a changed snapshot, then detect changes.</p> : null}
+        {!loading && changes.length === 0 ? <p style={{ color: '#64748b' }}>No Google changes yet. Use Snapshot Preview to save a normal snapshot, save a changed snapshot, then detect changes.</p> : null}
       </section>
 
       <section style={cardStyle}>
