@@ -40,6 +40,8 @@ export default function AdminShell({
         <nav style={navStyle}>
           <a style={navLinkStyle} href="/admin">Dashboard</a>
           <a style={navLinkStyle} href="/admin/google-ads">Google Ads Intelligence</a>
+          <a style={navLinkStyle} href="/admin/google-ads-connection">Google Ads Connection</a>
+          <a style={navLinkStyle} href="/admin/live-readiness">Live Readiness</a>
           <a style={navLinkStyle} href="/admin/ad-review">Ad Review</a>
           <a style={navLinkStyle} href="/admin/ai-directions">AI Directions</a>
           <a style={navLinkStyle} href="/admin/data-health">Data Health</a>
