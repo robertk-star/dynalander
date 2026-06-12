@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { cardStyle, gridStyle, inputStyle, labelStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
+import { cardStyle, gridStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
+import { activeAccountStorageKey, getAccountById } from '../_components/AdminAccountSelector';
 import {
   googleAdsAccounts,
   googleAdsAdMessages,
@@ -61,7 +62,24 @@ export default function GoogleAdsDashboard() {
   const [accountId, setAccountId] = useState(googleAdsAccounts[0].id);
   const [dateRange, setDateRange] = useState('Last 30 Days');
   const [directions, setDirections] = useState<Directions>(defaultDirections);
-  const selectedAccount = googleAdsAccounts.find((account) => account.id === accountId) || googleAdsAccounts[0];
+  const selectedAccount = getAccountById(accountId);
+
+  useEffect(() => {
+    const savedAccount = window.localStorage.getItem(activeAccountStorageKey);
+    if (savedAccount && googleAdsAccounts.some((account) => account.id === savedAccount)) {
+      setAccountId(savedAccount);
+    }
+
+    function handleAccountChange(event: Event) {
+      const customEvent = event as CustomEvent<string>;
+      if (customEvent.detail) {
+        setAccountId(customEvent.detail);
+      }
+    }
+
+    window.addEventListener('dynlander-active-account-change', handleAccountChange);
+    return () => window.removeEventListener('dynlander-active-account-change', handleAccountChange);
+  }, []);
 
   useEffect(() => {
     const savedValue = window.localStorage.getItem(storageKey);
@@ -78,14 +96,11 @@ export default function GoogleAdsDashboard() {
     <>
       <section style={cardStyle}>
         <div style={twoColumnStyle}>
-          <label style={labelStyle}>
-            Client account
-            <select style={inputStyle} value={accountId} onChange={(event) => setAccountId(event.target.value)}>
-              {googleAdsAccounts.map((account) => (
-                <option key={account.id} value={account.id}>{account.name} - {account.customerId}</option>
-              ))}
-            </select>
-          </label>
+          <div>
+            <div style={{ color: '#64748b', fontWeight: 800, fontSize: 13, marginBottom: 7 }}>Active client account</div>
+            <strong style={{ fontSize: 22 }}>{selectedAccount.name}</strong>
+            <p style={{ color: '#64748b', marginBottom: 0 }}>{selectedAccount.market} | Google Ads ID: {selectedAccount.customerId}</p>
+          </div>
           <div>
             <div style={{ color: '#64748b', fontWeight: 800, fontSize: 13, marginBottom: 7 }}>Date range</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -96,7 +111,7 @@ export default function GoogleAdsDashboard() {
           </div>
         </div>
         <p style={{ color: '#64748b', marginBottom: 0 }}>
-          Viewing mock data for <strong>{selectedAccount.name}</strong> in <strong>{selectedAccount.market}</strong>. Selected range: <strong>{dateRange}</strong>.
+          Account is controlled by the global selector in the left admin menu. Selected range: <strong>{dateRange}</strong>.
         </p>
       </section>
 
