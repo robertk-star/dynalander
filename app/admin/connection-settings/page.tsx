@@ -13,6 +13,11 @@ const settingsLinks = [
     description: 'Check whether the app is ready before pulling a real Google Ads account.'
   },
   {
+    title: 'Live Query Preview',
+    href: '/admin/live-query-preview',
+    description: 'Test the read-only Google Ads query path without saving any live data.'
+  },
+  {
     title: 'Snapshot Preview',
     href: '/admin/snapshot-preview',
     description: 'Preview what would be pulled from Google Ads before any setup snapshot is saved.'
