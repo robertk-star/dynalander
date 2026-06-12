@@ -8,9 +8,14 @@ const settingsLinks = [
     description: 'Review Google Ads credential readiness and confirm read-only safety status.'
   },
   {
+    title: 'Meta Ads Connection',
+    href: '/admin/meta-ads-connection',
+    description: 'Review future Facebook / Meta Ads API readiness and safety status.'
+  },
+  {
     title: 'Live Readiness',
     href: '/admin/live-readiness',
-    description: 'Check whether the app is ready before pulling a real Google Ads account.'
+    description: 'Check whether the app is ready before pulling a real ad account.'
   },
   {
     title: 'Live Query Preview',
