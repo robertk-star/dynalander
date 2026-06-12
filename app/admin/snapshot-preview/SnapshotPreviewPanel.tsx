@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
+import { useActivePlatform } from '../_components/useActivePlatform';
+import MetaSnapshotPreviewPanel from './MetaSnapshotPreviewPanel';
 
 type PreviewResponse = {
   ok: boolean;
@@ -28,6 +30,7 @@ type SnapshotHistory = { ok: boolean; source: string; snapshots: SnapshotRow[]; 
 type ChangeHistory = { ok: boolean; source: string; changes: ChangeRow[]; error?: string };
 
 export default function SnapshotPreviewPanel() {
+  const { platform } = useActivePlatform();
   const { accountId, selectedAccount } = useActiveAccount();
   const [data, setData] = useState<PreviewResponse | null>(null);
   const [history, setHistory] = useState<SnapshotHistory | null>(null);
@@ -100,6 +103,10 @@ export default function SnapshotPreviewPanel() {
 
   useEffect(() => { loadPreview(); }, [accountId]);
 
+  if (platform === 'meta_ads') {
+    return <MetaSnapshotPreviewPanel />;
+  }
+
   const cards = [
     { label: 'Preview mode', value: data?.mode || 'checking', note: data?.readOnly ? 'Read-only. No Google Ads changes.' : 'Checking mode.' },
     { label: 'Campaigns found', value: String(data?.counts.campaigns ?? 0), note: 'Would be reviewed before saving.' },
@@ -112,9 +119,9 @@ export default function SnapshotPreviewPanel() {
   return (
     <>
       <section style={{ ...cardStyle, border: '2px solid #f97316', background: '#fff7ed' }}>
-        <h2 style={{ marginTop: 0 }}>Preview, save, and detect changes</h2>
+        <h2 style={{ marginTop: 0 }}>Google preview, save, and detect changes</h2>
         <p style={{ color: '#9a3412', fontWeight: 800, lineHeight: 1.6 }}>
-          Phase 7.1 still does not pull live Google Ads data. Use the buttons below to save a normal mock snapshot, save a changed mock snapshot, then detect what changed between the newest two snapshots.
+          This Google Ads flow does not change live Google Ads. Use the buttons below to save a normal mock snapshot, save a changed mock snapshot, then detect what changed between the newest two snapshots.
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button type="button" onClick={() => saveMockSnapshot('base')} disabled={saving} style={blueButtonStyle}>{saving ? 'Working...' : `Save Normal Mock Snapshot`}</button>
