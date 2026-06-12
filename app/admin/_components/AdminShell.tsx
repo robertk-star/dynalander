@@ -1,13 +1,11 @@
 import type { ReactNode } from 'react';
-import AdminAccountSelector from './AdminAccountSelector';
 import ActiveAccountBanner from './ActiveAccountBanner';
+import AdminPlatformNav from './AdminPlatformNav';
 import ModeSafetyBanner from './ModeSafetyBanner';
 import {
   brandStyle,
   mainStyle,
   markStyle,
-  navLinkStyle,
-  navStyle,
   shellStyle,
   sidebarStyle,
   smallStyle,
@@ -34,23 +32,10 @@ export default function AdminShell({
           <div style={markStyle}>DL</div>
           <div>
             <strong>DynLander</strong><br />
-            <span style={smallStyle}>Admin demo</span>
+            <span style={smallStyle}>Multi-platform ad analyzer</span>
           </div>
         </div>
-        <AdminAccountSelector />
-        <nav style={navStyle}>
-          <a style={navLinkStyle} href="/admin">Dashboard</a>
-          <a style={navLinkStyle} href="/admin/google-ads">Google Ads Intelligence</a>
-          <a style={navLinkStyle} href="/admin/live-query-preview">Live Query Preview</a>
-          <a style={navLinkStyle} href="/admin/snapshot-preview">Snapshot Preview</a>
-          <a style={navLinkStyle} href="/admin/change-history">Change History</a>
-          <a style={navLinkStyle} href="/admin/ad-review">Ad Review</a>
-          <a style={navLinkStyle} href="/admin/themes">Theme Editor</a>
-          <a style={navLinkStyle} href="/admin/url-builder">URL Builder</a>
-          <a style={navLinkStyle} href="/admin/leads">Leads</a>
-          <a style={navLinkStyle} href="/sell?theme=repairs&city=Plano">View Landing Page</a>
-          <a style={{ ...navLinkStyle, marginTop: 24 }} href="/admin/connection-settings">Connection Settings</a>
-        </nav>
+        <AdminPlatformNav />
       </aside>
       <main style={mainStyle}>
         <div style={topStyle}>
