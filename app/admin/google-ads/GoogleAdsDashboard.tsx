@@ -2,19 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { cardStyle, gridStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
-import { activeAccountStorageKey, getAccountById } from '../_components/AdminAccountSelector';
+import { useActiveAccount } from '../_components/useActiveAccount';
+import { googleAdsDateRanges } from '../_data/dynlanderAdminData';
 import {
-  googleAdsAccounts,
-  googleAdsAdMessages,
-  googleAdsBudgetReview,
-  googleAdsCampaigns,
-  googleAdsDateRanges,
-  googleAdsExtensions,
-  googleAdsKeywords,
-  googleAdsPriorityItems,
-  googleAdsSearchTerms,
-  googleAdsSummary
-} from '../_data/dynlanderAdminData';
+  getAccountAdMessages,
+  getAccountBudgetReview,
+  getAccountCampaigns,
+  getAccountExtensions,
+  getAccountGoogleAdsSummary,
+  getAccountKeywords,
+  getAccountPriorityItems,
+  getAccountSearchTerms
+} from '../_data/accountScopedData';
 
 const storageKey = 'dynlander-ai-directions';
 const defaultDirections = {
@@ -59,27 +58,18 @@ function SectionTitle({ title, description }: { title: string; description?: str
 }
 
 export default function GoogleAdsDashboard() {
-  const [accountId, setAccountId] = useState(googleAdsAccounts[0].id);
+  const { accountId, selectedAccount } = useActiveAccount();
   const [dateRange, setDateRange] = useState('Last 30 Days');
   const [directions, setDirections] = useState<Directions>(defaultDirections);
-  const selectedAccount = getAccountById(accountId);
 
-  useEffect(() => {
-    const savedAccount = window.localStorage.getItem(activeAccountStorageKey);
-    if (savedAccount && googleAdsAccounts.some((account) => account.id === savedAccount)) {
-      setAccountId(savedAccount);
-    }
-
-    function handleAccountChange(event: Event) {
-      const customEvent = event as CustomEvent<string>;
-      if (customEvent.detail) {
-        setAccountId(customEvent.detail);
-      }
-    }
-
-    window.addEventListener('dynlander-active-account-change', handleAccountChange);
-    return () => window.removeEventListener('dynlander-active-account-change', handleAccountChange);
-  }, []);
+  const summary = getAccountGoogleAdsSummary(accountId);
+  const priorityItems = getAccountPriorityItems(accountId);
+  const campaigns = getAccountCampaigns(accountId);
+  const adMessages = getAccountAdMessages(accountId);
+  const keywords = getAccountKeywords(accountId);
+  const searchTerms = getAccountSearchTerms(accountId);
+  const extensions = getAccountExtensions(accountId);
+  const budgetReview = getAccountBudgetReview(accountId);
 
   useEffect(() => {
     const savedValue = window.localStorage.getItem(storageKey);
@@ -111,7 +101,7 @@ export default function GoogleAdsDashboard() {
           </div>
         </div>
         <p style={{ color: '#64748b', marginBottom: 0 }}>
-          Account is controlled by the global selector in the left admin menu. Selected range: <strong>{dateRange}</strong>.
+          Account-scoped mock data is loaded for <strong>{selectedAccount.name}</strong>. Selected range: <strong>{dateRange}</strong>.
         </p>
       </section>
 
@@ -127,20 +117,20 @@ export default function GoogleAdsDashboard() {
       </section>
 
       <div style={gridStyle}>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Spend</div><strong style={{ fontSize: 34 }}>{googleAdsSummary.spend}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Impressions</div><strong style={{ fontSize: 34 }}>{googleAdsSummary.impressions}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Clicks</div><strong style={{ fontSize: 34 }}>{googleAdsSummary.clicks}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>CTR</div><strong style={{ fontSize: 34 }}>{googleAdsSummary.ctr}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Avg CPC</div><strong style={{ fontSize: 34 }}>{googleAdsSummary.avgCpc}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Leads</div><strong style={{ fontSize: 34 }}>{googleAdsSummary.leads}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Cost per lead</div><strong style={{ fontSize: 34 }}>{googleAdsSummary.cpl}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Cost per qualified lead</div><strong style={{ fontSize: 34 }}>{googleAdsSummary.costPerQualifiedLead}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Spend</div><strong style={{ fontSize: 34 }}>{summary.spend}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Impressions</div><strong style={{ fontSize: 34 }}>{summary.impressions}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Clicks</div><strong style={{ fontSize: 34 }}>{summary.clicks}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>CTR</div><strong style={{ fontSize: 34 }}>{summary.ctr}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Avg CPC</div><strong style={{ fontSize: 34 }}>{summary.avgCpc}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Leads</div><strong style={{ fontSize: 34 }}>{summary.leads}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Cost per lead</div><strong style={{ fontSize: 34 }}>{summary.cpl}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Cost per qualified lead</div><strong style={{ fontSize: 34 }}>{summary.costPerQualifiedLead}</strong></div>
       </div>
 
       <section style={{ ...cardStyle, border: '1px solid #bfdbfe', background: '#eff6ff' }}>
         <SectionTitle title="Needs attention today" description="This is the main action list the account manager should review first." />
         <div style={gridStyle}>
-          {googleAdsPriorityItems.map((item) => (
+          {priorityItems.map((item) => (
             <div key={item.title} style={{ background: '#fff', borderRadius: 14, border: '1px solid #dbeafe', padding: 16 }}>
               <span style={badgeStyle}>{item.level}</span>
               <h3 style={{ marginBottom: 6 }}>{item.title}</h3>
@@ -154,7 +144,7 @@ export default function GoogleAdsDashboard() {
         <SectionTitle title="Campaign performance" description="Campaign-level readout for budget, bidding, clicks, leads, CPL, and recommendations." />
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Status</th><th style={thTdStyle}>Bid strategy</th><th style={thTdStyle}>Budget</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>Leads</th><th style={thTdStyle}>CPL</th><th style={thTdStyle}>Read</th></tr></thead>
-          <tbody>{googleAdsCampaigns.map((row) => <tr key={row.name}><td style={thTdStyle}><strong>{row.name}</strong><br /><span style={badgeStyle}>{row.quality}</span></td><td style={thTdStyle}>{row.status}</td><td style={thTdStyle}>{row.bidStrategy}</td><td style={thTdStyle}>{row.budget}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.cpl}</td><td style={thTdStyle}>{row.aiRead}</td></tr>)}</tbody>
+          <tbody>{campaigns.map((row) => <tr key={row.name}><td style={thTdStyle}><strong>{row.name}</strong><br /><span style={badgeStyle}>{row.quality}</span></td><td style={thTdStyle}>{row.status}</td><td style={thTdStyle}>{row.bidStrategy}</td><td style={thTdStyle}>{row.budget}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.cpl}</td><td style={thTdStyle}>{row.aiRead}</td></tr>)}</tbody>
         </table>
       </section>
 
@@ -162,7 +152,7 @@ export default function GoogleAdsDashboard() {
         <SectionTitle title="Ad message to landing page match" description="This connects the ad angle to the matching seller-intent page and lead result." />
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Ad theme</th><th style={thTdStyle}>Headline angle</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>Leads</th><th style={thTdStyle}>CPL</th><th style={thTdStyle}>Landing page</th><th style={thTdStyle}>Read</th></tr></thead>
-          <tbody>{googleAdsAdMessages.map((row) => <tr key={row.theme}><td style={thTdStyle}>{row.theme}</td><td style={thTdStyle}>{row.angle}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.cpl}</td><td style={thTdStyle}><a href={'/sell?theme=' + row.landingPage + '&city=Plano'}>theme={row.landingPage}</a></td><td style={thTdStyle}>{row.aiRead}</td></tr>)}</tbody>
+          <tbody>{adMessages.map((row) => <tr key={row.theme}><td style={thTdStyle}>{row.theme}</td><td style={thTdStyle}>{row.angle}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.cpl}</td><td style={thTdStyle}><a href={'/sell?theme=' + row.landingPage + '&city=Plano'}>theme={row.landingPage}</a></td><td style={thTdStyle}>{row.aiRead}</td></tr>)}</tbody>
         </table>
       </section>
 
@@ -171,7 +161,7 @@ export default function GoogleAdsDashboard() {
           <SectionTitle title="Keyword review" description="Labels which keywords should scale, be watched, or tightened." />
           <table style={tableStyle}>
             <thead><tr><th style={thTdStyle}>Keyword</th><th style={thTdStyle}>Match</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Leads</th><th style={thTdStyle}>Intent</th><th style={thTdStyle}>Action</th></tr></thead>
-            <tbody>{googleAdsKeywords.map((row) => <tr key={row.keyword}><td style={thTdStyle}>{row.keyword}</td><td style={thTdStyle}>{row.matchType}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}><span style={badgeStyle}>{row.intent}</span></td><td style={thTdStyle}>{row.action}</td></tr>)}</tbody>
+            <tbody>{keywords.map((row) => <tr key={row.keyword}><td style={thTdStyle}>{row.keyword}</td><td style={thTdStyle}>{row.matchType}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}><span style={badgeStyle}>{row.intent}</span></td><td style={thTdStyle}>{row.action}</td></tr>)}</tbody>
           </table>
         </section>
 
@@ -179,7 +169,7 @@ export default function GoogleAdsDashboard() {
           <SectionTitle title="Search term waste" description="Find searches that spent money but do not match seller intent." />
           <table style={tableStyle}>
             <thead><tr><th style={thTdStyle}>Search term</th><th style={thTdStyle}>Matched keyword</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Leads</th><th style={thTdStyle}>Action</th></tr></thead>
-            <tbody>{googleAdsSearchTerms.map((row) => <tr key={row.term}><td style={thTdStyle}>{row.term}</td><td style={thTdStyle}>{row.matchedKeyword}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.action}</td></tr>)}</tbody>
+            <tbody>{searchTerms.map((row) => <tr key={row.term}><td style={thTdStyle}>{row.term}</td><td style={thTdStyle}>{row.matchedKeyword}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.action}</td></tr>)}</tbody>
           </table>
         </section>
       </div>
@@ -188,13 +178,13 @@ export default function GoogleAdsDashboard() {
         <SectionTitle title="Sitelinks, callouts, and structured snippets" description="Review extension wording and whether it supports the seller intent themes." />
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Type</th><th style={thTdStyle}>Text</th><th style={thTdStyle}>Destination</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>Leads</th><th style={thTdStyle}>Note</th></tr></thead>
-          <tbody>{googleAdsExtensions.map((row) => <tr key={row.type + row.text}><td style={thTdStyle}>{row.type}</td><td style={thTdStyle}>{row.text}</td><td style={thTdStyle}>{row.destination}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.note}</td></tr>)}</tbody>
+          <tbody>{extensions.map((row) => <tr key={row.type + row.text}><td style={thTdStyle}>{row.type}</td><td style={thTdStyle}>{row.text}</td><td style={thTdStyle}>{row.destination}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.note}</td></tr>)}</tbody>
         </table>
       </section>
 
       <section style={cardStyle}>
         <SectionTitle title="Budget and bid strategy review" description="Mock recommendations for budget movement, bidding approach, and tracking cautions." />
-        <div style={gridStyle}>{googleAdsBudgetReview.map((row) => <div key={row.area} style={{ border: '1px solid #e2e8f0', borderRadius: 14, padding: 16 }}><h3 style={{ marginTop: 0 }}>{row.area}</h3><p style={{ color: '#475569', lineHeight: 1.5, marginBottom: 0 }}>{row.note}</p></div>)}</div>
+        <div style={gridStyle}>{budgetReview.map((row) => <div key={row.area} style={{ border: '1px solid #e2e8f0', borderRadius: 14, padding: 16 }}><h3 style={{ marginTop: 0 }}>{row.area}</h3><p style={{ color: '#475569', lineHeight: 1.5, marginBottom: 0 }}>{row.note}</p></div>)}</div>
       </section>
     </>
   );
