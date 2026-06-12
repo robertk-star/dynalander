@@ -31,6 +31,20 @@ export const baseDescriptions = [
 export const baseSitelinks = ['Sell As-Is', 'Inherited House', 'How It Works', 'Get Cash Offer'];
 export const baseCallouts = ['No Repairs Needed', 'No Realtor Fees', 'Close On Your Timeline', 'Local Cash Buyer'];
 
+const headlineSuggestions: Record<string, string[]> = {
+  repairs: ['Get an As-Is Cash Offer', 'Sell Without Repairs', 'Skip Repairs and Showings', 'As-Is Home Buyer Near You'],
+  fast: ['Sell On Your Timeline', 'Request a Fast Offer', 'Simple Cash Offer Review', 'Choose Your Closing Date'],
+  inherited: ['Inherited Property Offer', 'Sell an Inherited House', 'No Cleanout Needed', 'Review Probate Sale Options'],
+  foreclosure: ['Review Your Selling Options', 'Need to Sell Quickly?', 'Talk Through Your Timeline', 'Private Home Sale Review']
+};
+
+const descriptionSuggestions: Record<string, string[]> = {
+  repairs: ['Sell your house as-is without cleaning, repairs, or showings.', 'Request an as-is offer and review your timeline with no pressure.'],
+  fast: ['Request a simple offer and choose a closing date that fits your move.', 'Share the property details and timeline to review next steps.'],
+  inherited: ['Request an offer for an inherited property without cleaning it out first.', 'Review options for an inherited house without repairs or listing.'],
+  foreclosure: ['Review whether a fast sale may fit your timeline without any promises.', 'Talk through your selling timeline and review possible next steps.']
+};
+
 export function getAdReviewSetup(accountName: string, market: string, adGroupId: string) {
   const city = market.includes('North') ? 'Denton' : market.includes('Probate') ? 'Dallas' : 'Plano';
   const isInherited = adGroupId === 'inherited';
@@ -53,17 +67,33 @@ export function getAdReviewSetup(accountName: string, market: string, adGroupId:
   };
 }
 
-export function reviewHeadline(text: string, index: number, adGroupId: string) {
+export function getUniqueSuggestion(type: 'headline' | 'description', adGroupId: string, index: number, currentValue: string, used: Set<string>) {
+  const pool = type === 'headline' ? headlineSuggestions[adGroupId] || headlineSuggestions.repairs : descriptionSuggestions[adGroupId] || descriptionSuggestions.repairs;
+  const fallback = type === 'headline' ? `${currentValue} - Test ${index + 1}` : `${currentValue} Test variation ${index + 1}`;
+  const next = pool.find((item) => !used.has(item) && item !== currentValue) || fallback;
+  used.add(next);
+  return next;
+}
+
+export function reviewHeadline(text: string, index: number, adGroupId: string, usedSuggestions: Set<string>) {
   if ((text.includes('Today') || text.includes('Fast')) && adGroupId !== 'fast') {
-    return { status: 'Change', suggestion: adGroupId === 'repairs' ? 'Get an As-Is Cash Offer' : 'Review Your Selling Options', reason: 'Make this match the seller intent theme more closely.' };
+    return { status: 'Change', suggestion: getUniqueSuggestion('headline', adGroupId, index, text, usedSuggestions), reason: 'Make this unique and better matched to the seller intent theme.' };
   }
-  if (index === 5) return { status: 'Watch', suggestion: 'Test a stronger local trust headline', reason: 'Useful, but generic.' };
+  if (index === 5) return { status: 'Watch', suggestion: getUniqueSuggestion('headline', adGroupId, index, text, usedSuggestions), reason: 'Useful, but generic. Test a unique local trust angle.' };
+  usedSuggestions.add(text);
   return { status: 'Good', suggestion: text, reason: 'Clear and aligned with this ad group.' };
 }
 
-export function reviewDescription(text: string, index: number, adGroupId: string) {
+export function reviewDescription(text: string, index: number, adGroupId: string, usedSuggestions: Set<string>) {
   if (index === 1 && adGroupId === 'repairs') {
-    return { status: 'Change', suggestion: 'Sell your house as-is without cleaning, repairs, or showings.', reason: 'More specific to repairs/as-is sellers.' };
+    return { status: 'Change', suggestion: getUniqueSuggestion('description', adGroupId, index, text, usedSuggestions), reason: 'Use a unique version that is more specific to repairs/as-is sellers.' };
   }
-  return { status: 'Good', suggestion: text, reason: 'Keep, but test against a more specific seller-intent version.' };
+  usedSuggestions.add(text);
+  return { status: 'Good', suggestion: text, reason: 'Keep, but test against a more specific seller-intent version later.' };
 }
+
+export const mockChangeHistory = [
+  { date: '2026-06-01', item: 'Headline 3', before: 'Get a Cash Offer Today', after: 'Get an As-Is Cash Offer', status: 'Accepted', result: 'CPL improved from $95 to $82 after 14 days.' },
+  { date: '2026-06-05', item: 'Description 2', before: 'We buy houses as-is.', after: 'Sell your house as-is without cleaning, repairs, or showings.', status: 'Testing', result: 'Still collecting data.' },
+  { date: '2026-06-09', item: 'Sitelink', before: 'Get Cash Offer', after: 'Get As-Is Offer', status: 'Recommended', result: 'Waiting for human approval.' }
+];
