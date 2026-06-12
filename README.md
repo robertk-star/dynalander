@@ -2,28 +2,26 @@
 
 DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
-## Phase 7.2 status
+## Phase 7.3 status
 
-Phase 7.2 adds a dedicated Change History page. The app still does not pull or change live Google Ads data, but it can now show detected snapshot changes in a cleaner review page.
+Phase 7.3 adds a global Mode Safety Banner across the admin area. It makes it clear whether the app is in mock/test mode or live-read-only-ready mode before real Google Ads data is saved.
 
 Included:
 
 ```text
+Global Mode Safety Banner
+Mock / Test Mode label
+Live Read-Only Ready label
+Database readiness label
+Live preview status label
+Save live data disabled label
+Google Ads writes disabled label
+Preview required before save label
 Change History page
-Change summary cards
-Detected change table
-Review status labels
 Snapshot change detector API
-Detected changes history API
-Save normal mock snapshot
-Save changed mock snapshot
-Detect Changes button
 Live Query Preview page
-Read-only Google Ads service helper
 Snapshot Preview page
 Connection Settings page
-Google Ads Connection safety page
-Live Readiness checklist page
 Supabase data foundation
 ```
 
@@ -57,69 +55,32 @@ Supabase data foundation
 /api/health/database/tables
 ```
 
-## Phase 7.2 Change History
+## Phase 7.3 Mode Safety Banner
 
-The Change History page is located at:
-
-```text
-/admin/change-history
-```
-
-It reads detected changes from:
-
-```text
-/api/google-ads/changes
-```
+The banner appears under the active account banner on admin pages.
 
 It shows:
 
 ```text
-Active account
-Detected changes count
-Watching count
-Ready for review count
-Headline change count
-Description and final URL change count
-Old value
-New value
-Review after date
+Mode: Mock / Test Mode or Live Read-Only Ready
+Database status
+Live preview status
+Save live data: Disabled
+Google Ads writes: Disabled
+Preview required before save
 ```
 
-## Phase 7.1 Snapshot Change Detector
-
-The Snapshot Preview page supports this test flow:
-
-```text
-1. Save Normal Mock Snapshot
-2. Save Changed Mock Snapshot
-3. Click Detect Changes
-4. Review Detected change log
-5. Open Change History
-```
-
-The detector compares the newest two saved snapshots for each ad and logs differences in:
-
-```text
-ad_change_log
-```
-
-It can detect mock changes to:
-
-```text
-Headlines
-Descriptions
-Final URL
-```
+This protects the user from confusion once real credentials are added.
 
 ## Safe behavior
 
 ```text
-No live Google Ads data is pulled
+No live Google Ads data is saved automatically
 No Google Ads campaigns are changed
 No Google Ads ads are changed
 No Google Ads budgets are changed
 No Google Ads keywords are changed
-Only mock snapshot rows and mock detected change rows are inserted into Supabase
+Live snapshot saving remains disabled until a later build explicitly enables it
 ```
 
 ## SQL migrations
@@ -129,20 +90,6 @@ Run these in order when setting up Supabase:
 ```text
 supabase/migrations/001_dynlander_data_foundation.sql
 supabase/migrations/002_dynlander_seed_demo_records.sql
-```
-
-## Core tables
-
-```text
-clients
-google_ads_accounts
-ai_directions
-ad_snapshots
-ad_change_log
-ad_performance_snapshots
-ai_recommendations
-recommendation_results
-lead_events
 ```
 
 ## Vercel ENV needed
@@ -173,4 +120,4 @@ AI credentials are still not needed yet.
 
 ## SQL migration needed
 
-No new SQL for Phase 7.2. Use the existing two migration files.
+No new SQL for Phase 7.3. Use the existing two migration files.
