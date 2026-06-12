@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cardStyle, gridStyle, inputStyle, labelStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
 import {
   googleAdsAccounts,
@@ -14,6 +14,19 @@ import {
   googleAdsSearchTerms,
   googleAdsSummary
 } from '../_data/dynlanderAdminData';
+
+const storageKey = 'dynlander-ai-directions';
+const defaultDirections = {
+  monthlyBudget: '1000',
+  targetCpl: '100',
+  approvalRequired: 'Budget increases, bid strategy changes, and pausing campaigns require human approval before changes are made.',
+  leadQuality: 'Prioritize qualified seller leads over form volume. Strong leads include property city, reason for selling, timeline, and working phone number.',
+  recommendationRules: 'All recommendations must stay within the monthly budget. Do not recommend a budget increase unless another campaign budget is reduced. Explain tradeoffs in plain English.',
+  restrictedLanguage: 'Do not promise foreclosure results, guaranteed cash offers, or guaranteed closing timelines.',
+  clientNotes: 'Home buyer campaigns should focus on as-is sellers, inherited houses, tired landlords, and sellers needing speed without using pushy language.'
+};
+
+type Directions = typeof defaultDirections;
 
 const buttonStyle = (active: boolean) => ({
   border: active ? '1px solid #2563eb' : '1px solid #cbd5e1',
@@ -47,7 +60,19 @@ function SectionTitle({ title, description }: { title: string; description?: str
 export default function GoogleAdsDashboard() {
   const [accountId, setAccountId] = useState(googleAdsAccounts[0].id);
   const [dateRange, setDateRange] = useState('Last 30 Days');
+  const [directions, setDirections] = useState<Directions>(defaultDirections);
   const selectedAccount = googleAdsAccounts.find((account) => account.id === accountId) || googleAdsAccounts[0];
+
+  useEffect(() => {
+    const savedValue = window.localStorage.getItem(storageKey);
+    if (savedValue) {
+      try {
+        setDirections({ ...defaultDirections, ...JSON.parse(savedValue) });
+      } catch {
+        setDirections(defaultDirections);
+      }
+    }
+  }, []);
 
   return (
     <>
@@ -73,6 +98,17 @@ export default function GoogleAdsDashboard() {
         <p style={{ color: '#64748b', marginBottom: 0 }}>
           Viewing mock data for <strong>{selectedAccount.name}</strong> in <strong>{selectedAccount.market}</strong>. Selected range: <strong>{dateRange}</strong>.
         </p>
+      </section>
+
+      <section style={{ ...cardStyle, border: '1px solid #fde68a', background: '#fffbeb' }}>
+        <SectionTitle title="AI directions being applied" description="These guardrails come from the AI Directions page. The recommendation engine should read these before creating advice." />
+        <div style={gridStyle}>
+          <div><strong>Max monthly budget</strong><p style={{ color: '#475569' }}>${directions.monthlyBudget}</p></div>
+          <div><strong>Target CPL</strong><p style={{ color: '#475569' }}>${directions.targetCpl}</p></div>
+          <div><strong>Approval rules</strong><p style={{ color: '#475569' }}>{directions.approvalRequired}</p></div>
+          <div><strong>Recommendation rule</strong><p style={{ color: '#475569' }}>{directions.recommendationRules}</p></div>
+        </div>
+        <a href="/admin/ai-directions" style={{ color: '#1d4ed8', fontWeight: 800 }}>Edit AI directions</a>
       </section>
 
       <div style={gridStyle}>
