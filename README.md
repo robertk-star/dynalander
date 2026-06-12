@@ -2,9 +2,9 @@
 
 DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
-## Phase 5.2 status
+## Phase 6 status
 
-Phase 5.2 makes AI Directions database-backed when Supabase is connected, while keeping browser localStorage as a safe fallback when the database is not configured.
+Phase 6 adds the Google Ads API foundation. It does not pull live Google Ads data yet, but it adds server-side readiness checks and mock sync endpoints for setup and performance data.
 
 Included:
 
@@ -30,7 +30,10 @@ Database table health API
 Clients API with mock fallback
 AI Directions GET API
 AI Directions POST save API
-Demo account to database ID mapping
+Google Ads ENV health API
+Mock Google Ads setup sync endpoint
+Mock Google Ads performance sync endpoint
+Data Health Google Ads readiness display
 Health API route
 ```
 
@@ -52,49 +55,52 @@ Health API route
 /api/health/database/tables
 /api/admin/clients
 /api/admin/ai-directions
+/api/google-ads/health
+/api/google-ads/sync/setup
+/api/google-ads/sync/performance
+```
+
+## Phase 6 Google Ads Foundation
+
+The `/admin/data-health` page now calls:
+
+```text
+/api/google-ads/health
+```
+
+It checks whether the server has the needed Google Ads environment values. It does not expose the values.
+
+The mock sync endpoints are:
+
+```text
+/api/google-ads/sync/setup
+/api/google-ads/sync/performance
+```
+
+These prepare the future flow:
+
+```text
+Pull campaign setup
+Pull ad groups
+Pull responsive search ads
+Pull headlines and descriptions
+Pull sitelinks, callouts, and structured snippets
+Pull keyword and search term data
+Pull daily performance metrics
+Save snapshots into Supabase
+Detect changes over time
+Compare before and after performance
 ```
 
 ## Phase 5.2 AI Directions Persistence
 
-The `/admin/ai-directions` page now loads and saves through:
+The `/admin/ai-directions` page loads and saves through:
 
 ```text
 /api/admin/ai-directions
 ```
 
-Behavior:
-
-```text
-If Supabase is connected, AI Directions load from and save to the ai_directions table.
-If Supabase is not connected, the page falls back to browser localStorage.
-Each active demo account maps to its seeded client and Google Ads account IDs.
-```
-
-Mapping file:
-
-```text
-lib/accounts/demoAccountMap.ts
-```
-
-## Phase 5.1 Database Verification
-
-The `/admin/data-health` page calls:
-
-```text
-/api/health/database
-/api/health/database/tables
-/api/admin/clients
-```
-
-It shows:
-
-```text
-Database ENV status
-Table-level readiness
-Row counts per required table
-Seed record status
-Client records source
-```
+If Supabase is connected, AI Directions load from and save to the `ai_directions` table. If Supabase is not connected, the page falls back to browser localStorage.
 
 ## SQL migrations
 
@@ -104,8 +110,6 @@ Run these in order when setting up Supabase:
 supabase/migrations/001_dynlander_data_foundation.sql
 supabase/migrations/002_dynlander_seed_demo_records.sql
 ```
-
-The first migration creates the production tables. The second migration inserts demo clients, placeholder Google Ads accounts, and default AI directions.
 
 ## Core tables
 
@@ -123,7 +127,7 @@ lead_events
 
 ## Phase 3 Ad Review workflow
 
-The `/admin/ad-review` page is still mock data, but it now shows the intended future workflow:
+The `/admin/ad-review` page is still mock data, but it shows the intended future workflow:
 
 ```text
 AI reviews current headlines, descriptions, sitelinks, and callouts
@@ -136,23 +140,13 @@ AI will compare before and after performance
 AI can recommend keeping a change, testing longer, or rolling back to an older better-performing version
 ```
 
-## Demo landing page URLs
-
-```text
-/sell?theme=fast&city=Plano&utm_source=google&utm_medium=cpc&utm_campaign=fast-sale
-/sell?theme=repairs&city=Frisco&utm_source=google&utm_medium=cpc&utm_campaign=as-is-repairs
-/sell?theme=inherited&city=Dallas&utm_source=google&utm_medium=cpc&utm_campaign=inherited-house
-/sell?theme=foreclosure&city=McKinney&utm_source=google&utm_medium=cpc&utm_campaign=foreclosure-options
-/sell?theme=landlord&city=Fort%20Worth&utm_source=google&utm_medium=cpc&utm_campaign=tired-landlord
-```
-
 ## Google Ads work
 
-The current project uses mock data. It does not connect to Google Ads yet.
+The current project does not connect to live Google Ads yet.
 
 Do not put Google Ads credentials in browser JavaScript.
 
-The next production phase can begin Google Ads server-side connection work after the correct account is ready.
+The next production phase can add the Google Ads query service and begin pulling real read-only setup data after the correct account is ready.
 
 ## Local commands
 
@@ -164,11 +158,11 @@ npm run build
 
 ## SQL migration needed
 
-Yes. Run both migration files when setting up Supabase.
+No new SQL for Phase 6. Use the existing two migration files.
 
 ## Vercel ENV needed
 
-Yes for database-backed AI Directions:
+Database-backed features need:
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL
@@ -176,4 +170,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 ```
 
-Google Ads and AI credentials are still not needed yet.
+Google Ads readiness checks look for:
+
+```text
+GOOGLE_ADS_CLIENT_ID
+GOOGLE_ADS_CLIENT_SECRET
+GOOGLE_ADS_DEVELOPER_TOKEN
+GOOGLE_ADS_REFRESH_TOKEN
+GOOGLE_ADS_LOGIN_CUSTOMER_ID
+GOOGLE_ADS_CUSTOMER_ID
+```
+
+AI credentials are still not needed yet.
