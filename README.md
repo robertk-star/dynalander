@@ -2,9 +2,9 @@
 
 DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
-## Phase 2 status
+## Phase 3 status
 
-Phase 2 uses mock data only.
+Phase 3 adds the mock Ad Review and ad change tracking workflow.
 
 Included:
 
@@ -18,14 +18,20 @@ URL builder
 Lead dashboard
 Google Ads Intelligence dashboard
 AI Directions page
+Ad Review page
 Mock account selector
-Mock date range filters
+Account-scoped mock data
 Campaign performance table
 Ad message to landing page table
 Keyword review
 Search term waste review
 Sitelinks, callouts, and structured snippets review
 Budget and bid strategy review
+Ad setup score
+Unique headline recommendations
+Unique description recommendations
+Mock change history
+Use change / accepted tracking workflow
 Health API route
 ```
 
@@ -36,11 +42,27 @@ Health API route
 /sell
 /admin
 /admin/google-ads
+/admin/ad-review
 /admin/ai-directions
 /admin/themes
 /admin/url-builder
 /admin/leads
 /api/health
+```
+
+## Phase 3 Ad Review workflow
+
+The `/admin/ad-review` page is still mock data, but it now shows the intended future workflow:
+
+```text
+AI reviews current headlines, descriptions, sitelinks, and callouts
+AI recommends unique headline replacements
+AI recommends unique description replacements
+A user can mark a recommendation as used
+DynLander shows a tracked recommendation history
+Future production logic will detect changes from Google Ads snapshots
+AI will compare before and after performance
+AI can recommend keeping a change, testing longer, or rolling back to an older better-performing version
 ```
 
 ## AI Directions
@@ -73,11 +95,11 @@ In this demo, directions are saved in browser localStorage and shown on `/admin/
 
 ## Google Ads work
 
-The `/admin/google-ads` page currently uses mock data. It does not connect to Google Ads yet.
+The current project uses mock data. It does not connect to Google Ads yet.
 
 Do not put Google Ads credentials in browser JavaScript.
 
-Phase 3 should add secure server-side Google Ads API routes and Vercel environment variables after the correct Google Ads account is ready.
+The next production phase should add secure server-side Google Ads API routes and Vercel environment variables after the correct Google Ads account is ready.
 
 ## Local commands
 
@@ -95,4 +117,4 @@ No for this demo phase.
 
 No for this demo phase.
 
-Phase 3 will need Google Ads and AI credentials in Vercel environment variables.
+The production Google Ads connection will need Google Ads and AI credentials in Vercel environment variables.
