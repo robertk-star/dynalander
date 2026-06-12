@@ -2,9 +2,9 @@
 
 DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
-## Phase 6 status
+## Phase 6.1 status
 
-Phase 6 adds the Google Ads API foundation. It does not pull live Google Ads data yet, but it adds server-side readiness checks and mock sync endpoints for setup and performance data.
+Phase 6.1 adds the Google Ads connection safety layer and live-readiness checklist. The app still does not pull or change live Google Ads data.
 
 Included:
 
@@ -17,6 +17,8 @@ Theme editor
 URL builder
 Lead dashboard
 Google Ads Intelligence dashboard
+Google Ads Connection safety page
+Live Readiness checklist page
 AI Directions page
 Ad Review page
 Data Health page
@@ -31,9 +33,10 @@ Clients API with mock fallback
 AI Directions GET API
 AI Directions POST save API
 Google Ads ENV health API
+Google Ads live-readiness API
 Mock Google Ads setup sync endpoint
 Mock Google Ads performance sync endpoint
-Data Health Google Ads readiness display
+Read-only safety notice
 Health API route
 ```
 
@@ -44,6 +47,8 @@ Health API route
 /sell
 /admin
 /admin/google-ads
+/admin/google-ads-connection
+/admin/live-readiness
 /admin/ad-review
 /admin/ai-directions
 /admin/data-health
@@ -56,21 +61,65 @@ Health API route
 /api/admin/clients
 /api/admin/ai-directions
 /api/google-ads/health
+/api/google-ads/live-readiness
 /api/google-ads/sync/setup
 /api/google-ads/sync/performance
 ```
 
+## Phase 6.1 Connection Safety
+
+The Google Ads Connection page is located at:
+
+```text
+/admin/google-ads-connection
+```
+
+It shows:
+
+```text
+Google Ads connection status
+Credential readiness
+Read-only mode notice
+Client records count
+AI Directions count
+Live readiness checklist
+Write actions disabled confirmation
+```
+
+The Live Readiness page is located at:
+
+```text
+/admin/live-readiness
+```
+
+It uses:
+
+```text
+/api/google-ads/live-readiness
+```
+
+Before a live pull, these checks should be ready:
+
+```text
+Supabase ENV configured
+Database tables readable
+Client records loaded
+AI Directions records loaded
+Google Ads ENV configured
+Read-only mode confirmed
+Google Ads write actions disabled
+Snapshot preview required before save
+```
+
 ## Phase 6 Google Ads Foundation
 
-The `/admin/data-health` page now calls:
+The app checks Google Ads environment readiness through:
 
 ```text
 /api/google-ads/health
 ```
 
-It checks whether the server has the needed Google Ads environment values. It does not expose the values.
-
-The mock sync endpoints are:
+Mock sync endpoints are:
 
 ```text
 /api/google-ads/sync/setup
@@ -146,7 +195,7 @@ The current project does not connect to live Google Ads yet.
 
 Do not put Google Ads credentials in browser JavaScript.
 
-The next production phase can add the Google Ads query service and begin pulling real read-only setup data after the correct account is ready.
+The next production phase should add snapshot preview mode before any live data is saved.
 
 ## Local commands
 
@@ -158,7 +207,7 @@ npm run build
 
 ## SQL migration needed
 
-No new SQL for Phase 6. Use the existing two migration files.
+No new SQL for Phase 6.1. Use the existing two migration files.
 
 ## Vercel ENV needed
 
