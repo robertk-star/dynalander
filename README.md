@@ -2,23 +2,25 @@
 
 DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
-## Phase 7.1 status
+## Phase 7.2 status
 
-Phase 7.1 adds the snapshot change detector. The app still does not pull or change live Google Ads data, but it can now compare mock snapshots and insert detected changes into the `ad_change_log` table.
+Phase 7.2 adds a dedicated Change History page. The app still does not pull or change live Google Ads data, but it can now show detected snapshot changes in a cleaner review page.
 
 Included:
 
 ```text
+Change History page
+Change summary cards
+Detected change table
+Review status labels
 Snapshot change detector API
 Detected changes history API
 Save normal mock snapshot
 Save changed mock snapshot
 Detect Changes button
-Detected change log table
 Live Query Preview page
 Read-only Google Ads service helper
 Snapshot Preview page
-Mock snapshot save flow
 Connection Settings page
 Google Ads Connection safety page
 Live Readiness checklist page
@@ -28,6 +30,7 @@ Supabase data foundation
 ## Main routes
 
 ```text
+/admin/change-history
 /admin/snapshot-preview
 /admin/live-query-preview
 /admin/google-ads
@@ -54,15 +57,44 @@ Supabase data foundation
 /api/health/database/tables
 ```
 
+## Phase 7.2 Change History
+
+The Change History page is located at:
+
+```text
+/admin/change-history
+```
+
+It reads detected changes from:
+
+```text
+/api/google-ads/changes
+```
+
+It shows:
+
+```text
+Active account
+Detected changes count
+Watching count
+Ready for review count
+Headline change count
+Description and final URL change count
+Old value
+New value
+Review after date
+```
+
 ## Phase 7.1 Snapshot Change Detector
 
-The Snapshot Preview page now supports this test flow:
+The Snapshot Preview page supports this test flow:
 
 ```text
 1. Save Normal Mock Snapshot
 2. Save Changed Mock Snapshot
 3. Click Detect Changes
 4. Review Detected change log
+5. Open Change History
 ```
 
 The detector compares the newest two saved snapshots for each ad and logs differences in:
@@ -141,4 +173,4 @@ AI credentials are still not needed yet.
 
 ## SQL migration needed
 
-No new SQL for Phase 7.1. Use the existing two migration files.
+No new SQL for Phase 7.2. Use the existing two migration files.
