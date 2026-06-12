@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import AdminAccountSelector from './AdminAccountSelector';
 import ActiveAccountBanner from './ActiveAccountBanner';
+import ModeSafetyBanner from './ModeSafetyBanner';
 import {
   brandStyle,
   mainStyle,
@@ -47,7 +48,7 @@ export default function AdminShell({
           <a style={navLinkStyle} href="/admin/themes">Theme Editor</a>
           <a style={navLinkStyle} href="/admin/url-builder">URL Builder</a>
           <a style={navLinkStyle} href="/admin/leads">Leads</a>
-          <a style={navLinkStyle} href="/sell?theme=repairs&city=Plano&utm_source=google&utm_medium=cpc&utm_campaign=as-is-repairs">View Landing Page</a>
+          <a style={navLinkStyle} href="/sell?theme=repairs&city=Plano">View Landing Page</a>
           <a style={{ ...navLinkStyle, marginTop: 24 }} href="/admin/connection-settings">Connection Settings</a>
         </nav>
       </aside>
@@ -60,6 +61,7 @@ export default function AdminShell({
           {action}
         </div>
         <ActiveAccountBanner />
+        <ModeSafetyBanner />
         {children}
       </main>
     </div>
