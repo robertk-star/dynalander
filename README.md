@@ -1,53 +1,68 @@
-# DynLander Static Demo - Fixed Admin Version
+# DynLander
 
-This repo is a static HTML/CSS/JavaScript demo. It is **not** a Next.js app.
+DynLander is now a Next.js 15 App Router project.
 
-The earlier admin files were added under `app/admin/page.tsx`, which only works in a real Next.js App Router project. Because this repo does not include `package.json`, `next.config.ts`, or a real `app/layout.tsx`, those files are ignored by the deployed site and `/admin` returns 404.
+## Phase 1 status
 
-## Fixed pages
+Phase 1 converts the earlier static demo into a real Next.js foundation.
 
-Public landing page:
+Included:
+
+```text
+Next.js project setup
+Public homepage
+Dynamic seller landing page
+Admin dashboard
+Theme editor
+URL builder
+Lead dashboard
+Google Ads Intelligence placeholder
+Health API route
+```
+
+## Main routes
 
 ```text
 /
-```
-
-Admin pages:
-
-```text
-/admin/
-/admin/themes/
-/admin/url-builder/
-/admin/leads/
+/sell
+/admin
+/admin/google-ads
+/admin/themes
+/admin/url-builder
+/admin/leads
+/api/health
 ```
 
 ## Demo landing page URLs
 
 ```text
-/?theme=fast&city=Plano&utm_campaign=fast-sale&utm_source=google&utm_medium=cpc
-/?theme=repairs&city=Frisco&utm_campaign=as-is-repairs&utm_source=google&utm_medium=cpc
-/?theme=inherited&city=Dallas&utm_campaign=inherited-house&utm_source=google&utm_medium=cpc
-/?theme=foreclosure&city=McKinney&utm_campaign=foreclosure-options&utm_source=google&utm_medium=cpc
-/?theme=landlord&city=Fort%20Worth&utm_campaign=tired-landlord&utm_source=google&utm_medium=cpc
+/sell?theme=fast&city=Plano&utm_source=google&utm_medium=cpc&utm_campaign=fast-sale
+/sell?theme=repairs&city=Frisco&utm_source=google&utm_medium=cpc&utm_campaign=as-is-repairs
+/sell?theme=inherited&city=Dallas&utm_source=google&utm_medium=cpc&utm_campaign=inherited-house
+/sell?theme=foreclosure&city=McKinney&utm_source=google&utm_medium=cpc&utm_campaign=foreclosure-options
+/sell?theme=landlord&city=Fort%20Worth&utm_source=google&utm_medium=cpc&utm_campaign=tired-landlord
 ```
 
-## What to delete from GitHub
+## Google Ads work
 
-Delete these old folders/files because they are for a Next.js patch and do not work in this static repo:
+The `/admin/google-ads` page currently uses mock data. Phase 2 should add secure server-side Google Ads API routes and Vercel environment variables.
 
-```text
-app/
-src/
-components/
-lib/
-README-DYNLANDER-ADMIN-FIX.md
-README-DYNLANDER-ADMIN-PATCH.md
+Do not put Google Ads credentials in browser JavaScript.
+
+## Local commands
+
+```bash
+npm install
+npm run dev
+npm run build
 ```
 
 ## SQL migration needed
 
-No.
+No for Phase 1.
 
 ## Vercel ENV needed
 
-No.
+No for Phase 1.
+
+Phase 2 will need Google Ads and AI credentials in Vercel environment variables.
