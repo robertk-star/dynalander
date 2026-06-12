@@ -2,9 +2,9 @@
 
 DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
-## Phase 5 status
+## Phase 5.1 status
 
-Phase 5 adds the Supabase connection foundation and real Data Health checks. The app still works with mock data, but it can now verify database environment configuration and read client records when Supabase is connected.
+Phase 5.1 adds database table verification and demo seed records. The app can now check whether required database tables exist and whether demo client records have been loaded.
 
 Included:
 
@@ -23,8 +23,10 @@ Data Health page
 Mock account selector
 Account-scoped mock data
 Production database schema migration
+Demo seed migration
 Supabase server helper
-Database health API
+Database ENV health API
+Database table health API
 Clients API with mock fallback
 AI Directions read API placeholder
 Health API route
@@ -45,30 +47,43 @@ Health API route
 /admin/leads
 /api/health
 /api/health/database
+/api/health/database/tables
 /api/admin/clients
 /api/admin/ai-directions
 ```
 
-## Phase 5 Database Health
+## Phase 5.1 Database Verification
 
 The `/admin/data-health` page now calls:
 
 ```text
 /api/health/database
+/api/health/database/tables
 /api/admin/clients
 ```
 
-If Supabase environment variables are missing, the page shows missing status and falls back to mock clients. If Supabase is configured and the migration has been run, the clients API reads from the database.
+It shows:
 
-## Phase 4 Data Foundation
+```text
+Database ENV status
+Table-level readiness
+Row counts per required table
+Seed record status
+Client records source
+```
 
-The SQL migration is located at:
+## SQL migrations
+
+Run these in order when setting up Supabase:
 
 ```text
 supabase/migrations/001_dynlander_data_foundation.sql
+supabase/migrations/002_dynlander_seed_demo_records.sql
 ```
 
-It prepares tables for:
+The first migration creates the production tables. The second migration inserts demo clients, placeholder Google Ads accounts, and default AI directions.
+
+## Core tables
 
 ```text
 clients
@@ -131,7 +146,7 @@ The current project uses mock data. It does not connect to Google Ads yet.
 
 Do not put Google Ads credentials in browser JavaScript.
 
-The next production phase should add table-level checks, seed records, and server-side saves for AI Directions before Google Ads is connected.
+The next production phase should save AI Directions to Supabase before Google Ads is connected.
 
 ## Local commands
 
@@ -143,15 +158,11 @@ npm run build
 
 ## SQL migration needed
 
-Yes. Run this when ready to create the production Supabase database:
-
-```text
-supabase/migrations/001_dynlander_data_foundation.sql
-```
+Yes. Run both migration files when setting up Supabase.
 
 ## Vercel ENV needed
 
-Yes for Phase 5 database health checks:
+Yes for database health checks:
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL
