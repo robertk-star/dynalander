@@ -42,6 +42,7 @@ export default function AdminShell({
           <a style={navLinkStyle} href="/admin/google-ads">Google Ads Intelligence</a>
           <a style={navLinkStyle} href="/admin/live-query-preview">Live Query Preview</a>
           <a style={navLinkStyle} href="/admin/snapshot-preview">Snapshot Preview</a>
+          <a style={navLinkStyle} href="/admin/change-history">Change History</a>
           <a style={navLinkStyle} href="/admin/ad-review">Ad Review</a>
           <a style={navLinkStyle} href="/admin/themes">Theme Editor</a>
           <a style={navLinkStyle} href="/admin/url-builder">URL Builder</a>
