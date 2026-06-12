@@ -26,28 +26,71 @@ export default function AiDirectionsForm() {
   const { accountId, selectedAccount } = useActiveAccount();
   const [directions, setDirections] = useState<Directions>(defaultDirections);
   const [saved, setSaved] = useState(false);
+  const [source, setSource] = useState('loading');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const savedValue = window.localStorage.getItem(storageKey(accountId));
-    if (savedValue) {
+    async function loadDirections() {
+      setSaved(false);
+      setMessage('');
       try {
-        setDirections({ ...defaultDirections, ...JSON.parse(savedValue) });
+        const response = await fetch(`/api/admin/ai-directions?accountKey=${encodeURIComponent(accountId)}`, { cache: 'no-store' });
+        const result = await response.json();
+        if (result.ok && result.directions) {
+          setDirections({ ...defaultDirections, ...result.directions });
+          setSource(result.source || 'database');
+          return;
+        }
       } catch {
+        // fall back below
+      }
+
+      const savedValue = window.localStorage.getItem(storageKey(accountId));
+      if (savedValue) {
+        try {
+          setDirections({ ...defaultDirections, ...JSON.parse(savedValue) });
+          setSource('local');
+          return;
+        } catch {
+          setDirections(defaultDirections);
+        }
+      } else {
         setDirections(defaultDirections);
       }
-    } else {
-      setDirections(defaultDirections);
+      setSource('default');
     }
-    setSaved(false);
+
+    loadDirections();
   }, [accountId]);
 
   function updateField(field: keyof Directions, value: string) {
     setDirections((current) => ({ ...current, [field]: value }));
     setSaved(false);
+    setMessage('');
   }
 
-  function saveDirections() {
+  async function saveDirections() {
     window.localStorage.setItem(storageKey(accountId), JSON.stringify(directions));
+
+    try {
+      const response = await fetch('/api/admin/ai-directions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountKey: accountId, ...directions })
+      });
+      const result = await response.json();
+      if (result.ok) {
+        setSource(result.source || 'database');
+        setMessage(`Saved to ${result.source || 'database'} for ${selectedAccount.name}.`);
+      } else {
+        setSource('local');
+        setMessage(`Saved locally. Database save unavailable: ${result.error || 'not configured'}`);
+      }
+    } catch {
+      setSource('local');
+      setMessage('Saved locally. Database save request failed.');
+    }
+
     setSaved(true);
   }
 
@@ -55,6 +98,8 @@ export default function AiDirectionsForm() {
     setDirections(defaultDirections);
     window.localStorage.setItem(storageKey(accountId), JSON.stringify(defaultDirections));
     setSaved(true);
+    setSource('local');
+    setMessage(`Reset locally for ${selectedAccount.name}. Click Save AI Directions to sync to database if connected.`);
   }
 
   return (
@@ -62,8 +107,9 @@ export default function AiDirectionsForm() {
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>AI guardrails for {selectedAccount.name}</h2>
         <p style={{ color: '#64748b', lineHeight: 1.5 }}>
-          These directions are saved separately for the active account in this demo. Later they should save per client account in the database.
+          These directions now load through the API. If Supabase is connected, they save to the database. If not, they fall back to browser storage.
         </p>
+        <p style={{ color: '#64748b' }}><strong>Current source:</strong> {source}</p>
         <div style={gridStyle}>
           <label style={labelStyle}>
             Max monthly ad budget
@@ -78,7 +124,7 @@ export default function AiDirectionsForm() {
           <button type="button" onClick={saveDirections} style={blueButtonStyle}>Save AI Directions</button>
           <button type="button" onClick={resetDirections} style={{ ...blueButtonStyle, background: '#334155' }}>Reset Demo Defaults</button>
         </div>
-        {saved ? <p style={{ color: '#166534', fontWeight: 800 }}>Saved for {selectedAccount.name}. The Google Ads dashboard will now show these account-specific guardrails.</p> : null}
+        {saved ? <p style={{ color: '#166534', fontWeight: 800 }}>{message || `Saved for ${selectedAccount.name}.`}</p> : null}
       </section>
 
       <section style={twoColumnStyle}>
