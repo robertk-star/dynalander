@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import AdminAccountSelector from './AdminAccountSelector';
 import {
   brandStyle,
   mainStyle,
@@ -34,6 +35,7 @@ export default function AdminShell({
             <span style={smallStyle}>Admin demo</span>
           </div>
         </div>
+        <AdminAccountSelector />
         <nav style={navStyle}>
           <a style={navLinkStyle} href="/admin">Dashboard</a>
           <a style={navLinkStyle} href="/admin/google-ads">Google Ads Intelligence</a>
