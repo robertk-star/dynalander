@@ -20,7 +20,12 @@ const settingsLinks = [
   {
     title: 'Snapshot Preview',
     href: '/admin/snapshot-preview',
-    description: 'Preview what would be pulled from Google Ads before any setup snapshot is saved.'
+    description: 'Preview, save mock snapshots, and detect snapshot changes.'
+  },
+  {
+    title: 'Change History',
+    href: '/admin/change-history',
+    description: 'Review detected headline, description, and final URL changes from saved snapshots.'
   },
   {
     title: 'Data Health',
