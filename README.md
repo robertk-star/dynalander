@@ -2,9 +2,9 @@
 
 DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
-## Phase 5.1 status
+## Phase 5.2 status
 
-Phase 5.1 adds database table verification and demo seed records. The app can now check whether required database tables exist and whether demo client records have been loaded.
+Phase 5.2 makes AI Directions database-backed when Supabase is connected, while keeping browser localStorage as a safe fallback when the database is not configured.
 
 Included:
 
@@ -28,7 +28,9 @@ Supabase server helper
 Database ENV health API
 Database table health API
 Clients API with mock fallback
-AI Directions read API placeholder
+AI Directions GET API
+AI Directions POST save API
+Demo account to database ID mapping
 Health API route
 ```
 
@@ -52,9 +54,31 @@ Health API route
 /api/admin/ai-directions
 ```
 
+## Phase 5.2 AI Directions Persistence
+
+The `/admin/ai-directions` page now loads and saves through:
+
+```text
+/api/admin/ai-directions
+```
+
+Behavior:
+
+```text
+If Supabase is connected, AI Directions load from and save to the ai_directions table.
+If Supabase is not connected, the page falls back to browser localStorage.
+Each active demo account maps to its seeded client and Google Ads account IDs.
+```
+
+Mapping file:
+
+```text
+lib/accounts/demoAccountMap.ts
+```
+
 ## Phase 5.1 Database Verification
 
-The `/admin/data-health` page now calls:
+The `/admin/data-health` page calls:
 
 ```text
 /api/health/database
@@ -112,24 +136,6 @@ AI will compare before and after performance
 AI can recommend keeping a change, testing longer, or rolling back to an older better-performing version
 ```
 
-## AI Directions
-
-The `/admin/ai-directions` page lets the user set guardrails before DynLander evaluates Google Ads performance.
-
-Example guardrails:
-
-```text
-Max monthly ad budget
-Target cost per lead
-Approval rules
-Lead quality priorities
-Recommendation rules
-Restricted language notes
-Client-specific notes
-```
-
-In this demo, directions are saved in browser localStorage and shown on `/admin/google-ads`. In production, directions should be saved per client account in the database.
-
 ## Demo landing page URLs
 
 ```text
@@ -146,7 +152,7 @@ The current project uses mock data. It does not connect to Google Ads yet.
 
 Do not put Google Ads credentials in browser JavaScript.
 
-The next production phase should save AI Directions to Supabase before Google Ads is connected.
+The next production phase can begin Google Ads server-side connection work after the correct account is ready.
 
 ## Local commands
 
@@ -162,7 +168,7 @@ Yes. Run both migration files when setting up Supabase.
 
 ## Vercel ENV needed
 
-Yes for database health checks:
+Yes for database-backed AI Directions:
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL
