@@ -1,10 +1,10 @@
 # DynLander
 
-DynLander is a Next.js 15 App Router project for dynamic landing pages and AI-style Google Ads intelligence.
+DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
 ## Phase 2 status
 
-Phase 2 expands the Google Ads Intelligence dashboard using mock data only.
+Phase 2 uses mock data only.
 
 Included:
 
@@ -17,6 +17,7 @@ Theme editor
 URL builder
 Lead dashboard
 Google Ads Intelligence dashboard
+AI Directions page
 Mock account selector
 Mock date range filters
 Campaign performance table
@@ -35,11 +36,30 @@ Health API route
 /sell
 /admin
 /admin/google-ads
+/admin/ai-directions
 /admin/themes
 /admin/url-builder
 /admin/leads
 /api/health
 ```
+
+## AI Directions
+
+The `/admin/ai-directions` page lets the user set guardrails before DynLander evaluates Google Ads performance.
+
+Example guardrails:
+
+```text
+Max monthly ad budget
+Target cost per lead
+Approval rules
+Lead quality priorities
+Recommendation rules
+Restricted language notes
+Client-specific notes
+```
+
+In this demo, directions are saved in browser localStorage and shown on `/admin/google-ads`. In production, directions should be saved per client account in the database.
 
 ## Demo landing page URLs
 
@@ -69,10 +89,10 @@ npm run build
 
 ## SQL migration needed
 
-No for Phase 2.
+No for this demo phase.
 
 ## Vercel ENV needed
 
-No for Phase 2.
+No for this demo phase.
 
 Phase 3 will need Google Ads and AI credentials in Vercel environment variables.
