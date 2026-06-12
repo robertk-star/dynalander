@@ -84,45 +84,79 @@ export const dynlanderDemoLeads = [
   { name: 'Demo Seller 5', phone: '(555) 010-6755', city: 'Fort Worth', theme: 'Tired Landlord', source: 'Google CPC', status: 'New', created: '2 days ago' }
 ];
 
+export const googleAdsAccounts = [
+  { id: 'cash-offer-demo', name: 'Cash Offer Demo', customerId: '123-456-7890', market: 'DFW Home Buyers' },
+  { id: 'north-texas-buyers', name: 'North Texas Buyers', customerId: '234-567-8901', market: 'North Texas' },
+  { id: 'probate-home-demo', name: 'Probate Home Demo', customerId: '345-678-9012', market: 'Inherited / Probate' }
+];
+
+export const googleAdsDateRanges = ['Today', 'Yesterday', 'Last 7 Days', 'Last 30 Days', 'This Month', 'Last Month'];
+
 export const googleAdsSummary = {
   spend: '$7,842',
-  clicks: '1,438',
   impressions: '22,910',
+  clicks: '1,438',
   ctr: '6.3%',
+  avgCpc: '$5.45',
   leads: '92',
+  conversionRate: '6.4%',
   cpl: '$85',
-  conversionRate: '6.4%'
+  qualifiedLeads: '54',
+  costPerQualifiedLead: '$145'
 };
 
+export const googleAdsPriorityItems = [
+  { level: 'High', title: 'Search terms are wasting spend', detail: 'Mock data shows $274 spent on buyer-intent searches like homes for sale and rental houses. Add negatives before scaling budget.' },
+  { level: 'High', title: 'Repairs / As-Is should be scaled', detail: 'This campaign has the best demo CPL and the strongest message-to-page match. Create more city variants and increase budget carefully.' },
+  { level: 'Medium', title: 'Foreclosure has click interest but weak lead conversion', detail: 'CTR is high, but CPL is weak. Test softer wording and reduce form friction.' },
+  { level: 'Medium', title: 'Broad We Buy Houses keywords need tighter control', detail: 'Broad message traffic is expensive. Split by city, tighten match types, and send clicks to more specific DynLander themes.' }
+];
+
 export const googleAdsCampaigns = [
-  { name: 'Sell As-Is / Repairs', bidStrategy: 'Maximize Conversions', budget: '$175/day', spend: '$2,214', clicks: 382, ctr: '7.8%', leads: 39, cpl: '$57', aiRead: 'Best performer. Consider more budget and more city variants.' },
-  { name: 'Cash Offer Fast', bidStrategy: 'Target CPA', budget: '$150/day', spend: '$2,482', clicks: 476, ctr: '5.9%', leads: 26, cpl: '$95', aiRead: 'Good volume, but message is broad. Test stronger seller intent pages.' },
-  { name: 'Foreclosure Options', bidStrategy: 'Maximize Clicks', budget: '$90/day', spend: '$1,336', clicks: 318, ctr: '8.4%', leads: 11, cpl: '$121', aiRead: 'High click interest, weaker leads. Review page tone and form friction.' },
-  { name: 'Inherited House', bidStrategy: 'Maximize Conversions', budget: '$100/day', spend: '$1,810', clicks: 262, ctr: '6.1%', leads: 16, cpl: '$113', aiRead: 'Strong intent. Needs more probate/inherited ad copy tests.' }
+  { name: 'Sell As-Is / Repairs', status: 'Enabled', bidStrategy: 'Maximize Conversions', budget: '$175/day', spend: '$2,214', impressions: '4,912', clicks: 382, ctr: '7.8%', avgCpc: '$5.80', leads: 39, conversionRate: '10.2%', cpl: '$57', quality: 'Scale', aiRead: 'Best performer. Consider more budget and more city variants.' },
+  { name: 'Cash Offer Fast', status: 'Enabled', bidStrategy: 'Target CPA', budget: '$150/day', spend: '$2,482', impressions: '8,067', clicks: 476, ctr: '5.9%', avgCpc: '$5.21', leads: 26, conversionRate: '5.5%', cpl: '$95', quality: 'Watch', aiRead: 'Good volume, but message is broad. Test stronger seller intent pages.' },
+  { name: 'Foreclosure Options', status: 'Limited by strategy', bidStrategy: 'Maximize Clicks', budget: '$90/day', spend: '$1,336', impressions: '3,786', clicks: 318, ctr: '8.4%', avgCpc: '$4.20', leads: 11, conversionRate: '3.5%', cpl: '$121', quality: 'Needs work', aiRead: 'High click interest, weaker leads. Review page tone and form friction.' },
+  { name: 'Inherited House', status: 'Enabled', bidStrategy: 'Maximize Conversions', budget: '$100/day', spend: '$1,810', impressions: '3,422', clicks: 262, ctr: '6.1%', avgCpc: '$6.91', leads: 16, conversionRate: '6.1%', cpl: '$113', quality: 'Build out', aiRead: 'Strong intent. Needs more probate/inherited ad copy tests.' }
+];
+
+export const googleAdsAdMessages = [
+  { theme: 'Repairs / As-Is', angle: 'No repairs needed', clicks: 241, ctr: '8.1%', leads: 31, cpl: '$61', landingPage: 'repairs', aiRead: 'Best ad-to-page match. Keep testing as-is language.' },
+  { theme: 'Fast Cash Offer', angle: 'Speed and cash offer', clicks: 386, ctr: '6.0%', leads: 22, cpl: '$102', landingPage: 'fast', aiRead: 'Gets clicks but not enough qualified leads. Make copy more specific.' },
+  { theme: 'Inherited House', angle: 'Inherited property cleanup', clicks: 119, ctr: '6.7%', leads: 13, cpl: '$76', landingPage: 'inherited', aiRead: 'Strong seller intent. Add probate and cleanout FAQs.' },
+  { theme: 'Foreclosure Options', angle: 'Timeline pressure', clicks: 164, ctr: '8.9%', leads: 7, cpl: '$151', landingPage: 'foreclosure', aiRead: 'High sensitivity. Test less aggressive CTA wording.' },
+  { theme: 'Tired Landlord', angle: 'Tenant headaches', clicks: 92, ctr: '5.4%', leads: 8, cpl: '$89', landingPage: 'landlord', aiRead: 'Good niche. Needs more rental-property sitelinks.' }
 ];
 
 export const googleAdsKeywords = [
-  { keyword: 'sell my house fast', clicks: 184, leads: 18, cpl: '$73', action: 'Keep and test city-specific page copy.' },
-  { keyword: 'sell house as is', clicks: 142, leads: 22, cpl: '$52', action: 'Scale. This matches the repairs landing page well.' },
-  { keyword: 'we buy houses', clicks: 238, leads: 12, cpl: '$138', action: 'Broad but expensive. Split by city and review search terms.' },
-  { keyword: 'sell inherited house', clicks: 84, leads: 10, cpl: '$64', action: 'Keep. Add more inherited-house FAQs.' },
-  { keyword: 'avoid foreclosure sell house', clicks: 91, leads: 5, cpl: '$146', action: 'Review ad copy and use softer, option-based page language.' }
+  { keyword: 'sell my house fast', matchType: 'Phrase', spend: '$1,314', clicks: 184, ctr: '6.8%', leads: 18, cpl: '$73', intent: 'High', action: 'Keep and test city-specific page copy.' },
+  { keyword: 'sell house as is', matchType: 'Exact', spend: '$1,144', clicks: 142, ctr: '8.9%', leads: 22, cpl: '$52', intent: 'High', action: 'Scale. This matches the repairs landing page well.' },
+  { keyword: 'we buy houses', matchType: 'Broad', spend: '$1,656', clicks: 238, ctr: '5.1%', leads: 12, cpl: '$138', intent: 'Mixed', action: 'Broad but expensive. Split by city and review search terms.' },
+  { keyword: 'sell inherited house', matchType: 'Phrase', spend: '$642', clicks: 84, ctr: '7.3%', leads: 10, cpl: '$64', intent: 'High', action: 'Keep. Add more inherited-house FAQs.' },
+  { keyword: 'avoid foreclosure sell house', matchType: 'Phrase', spend: '$731', clicks: 91, ctr: '9.1%', leads: 5, cpl: '$146', intent: 'High but sensitive', action: 'Review ad copy and use softer, option-based page language.' }
 ];
 
 export const googleAdsSearchTerms = [
-  { term: 'sell my house fast plano', cost: '$214', leads: 5, label: 'High intent. Keep.' },
-  { term: 'homes for sale in plano', cost: '$118', leads: 0, label: 'Wrong intent. Add negative keyword.' },
-  { term: 'zillow home value estimate', cost: '$92', leads: 0, label: 'Research intent. Consider negative.' },
-  { term: 'sell inherited house without probate', cost: '$176', leads: 3, label: 'High intent. Build probate FAQ content.' },
-  { term: 'rental houses near me', cost: '$64', leads: 0, label: 'Wrong intent. Add negative keyword.' }
+  { term: 'sell my house fast plano', matchedKeyword: 'sell my house fast', spend: '$214', clicks: 32, leads: 5, intent: 'High', action: 'Keep and create Plano-specific variant.' },
+  { term: 'homes for sale in plano', matchedKeyword: 'we buy houses', spend: '$118', clicks: 27, leads: 0, intent: 'Wrong intent', action: 'Add homes for sale as negative.' },
+  { term: 'zillow home value estimate', matchedKeyword: 'we buy houses', spend: '$92', clicks: 19, leads: 0, intent: 'Research only', action: 'Consider negative or send to valuation content.' },
+  { term: 'sell inherited house without probate', matchedKeyword: 'sell inherited house', spend: '$176', clicks: 21, leads: 3, intent: 'High', action: 'Build probate FAQ content.' },
+  { term: 'rental houses near me', matchedKeyword: 'we buy houses', spend: '$64', clicks: 14, leads: 0, intent: 'Wrong intent', action: 'Add rental houses as negative.' }
 ];
 
 export const googleAdsExtensions = [
-  { type: 'Sitelink', text: 'Sell As-Is', clicks: 88, leads: 13, note: 'Strong match with repairs theme.' },
-  { type: 'Sitelink', text: 'Inherited House', clicks: 41, leads: 7, note: 'Good conversion. Keep and expand.' },
-  { type: 'Callout', text: 'No Repairs Needed', clicks: 'n/a', leads: 'n/a', note: 'Good message support for as-is campaigns.' },
-  { type: 'Callout', text: 'Close On Your Timeline', clicks: 'n/a', leads: 'n/a', note: 'Useful but generic. Test stronger wording.' },
-  { type: 'Structured Snippet', text: 'Situations: Foreclosure, Divorce, Probate, Relocation', clicks: 'n/a', leads: 'n/a', note: 'Good seller-intent coverage.' }
+  { type: 'Sitelink', text: 'Sell As-Is', destination: '/sell?theme=repairs', clicks: 88, leads: 13, note: 'Strong match with repairs theme. Keep and test city variants.' },
+  { type: 'Sitelink', text: 'Inherited House', destination: '/sell?theme=inherited', clicks: 41, leads: 7, note: 'Good conversion. Keep and expand.' },
+  { type: 'Sitelink', text: 'How It Works', destination: '/sell?theme=fast#how-it-works', clicks: 53, leads: 4, note: 'Educational, but weaker lead conversion.' },
+  { type: 'Callout', text: 'No Repairs Needed', destination: 'Ad extension', clicks: 'n/a', leads: 'n/a', note: 'Good message support for as-is campaigns.' },
+  { type: 'Callout', text: 'Close On Your Timeline', destination: 'Ad extension', clicks: 'n/a', leads: 'n/a', note: 'Useful but generic. Test stronger wording.' },
+  { type: 'Structured Snippet', text: 'Situations: Foreclosure, Divorce, Probate, Relocation', destination: 'Ad extension', clicks: 'n/a', leads: 'n/a', note: 'Good seller-intent coverage.' }
+];
+
+export const googleAdsBudgetReview = [
+  { area: 'Budget shift', note: 'Move 10-15% of budget from broad Cash Offer Fast into Sell As-Is / Repairs after negative keywords are added.' },
+  { area: 'Limited budget', note: 'Inherited House has strong intent but limited volume. Test more cities before increasing daily budget.' },
+  { area: 'Bid strategy', note: 'Foreclosure Options uses Maximize Clicks. This may be driving low-quality traffic. Test Maximize Conversions after conversion tracking is trusted.' },
+  { area: 'Tracking caution', note: 'Do not scale until form, chat, and call leads are separated into qualified and unqualified lead types.' }
 ];
 
 export const googleAdsRecommendations = [
