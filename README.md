@@ -2,9 +2,9 @@
 
 DynLander is a Next.js 15 App Router project for dynamic landing pages and Google Ads intelligence.
 
-## Phase 3 status
+## Phase 4 status
 
-Phase 3 adds the mock Ad Review and ad change tracking workflow.
+Phase 4 adds the production data foundation and sync-readiness page. The app still uses mock data, but the repo now includes the first SQL schema for the future database.
 
 Included:
 
@@ -19,19 +19,15 @@ Lead dashboard
 Google Ads Intelligence dashboard
 AI Directions page
 Ad Review page
+Data Health page
 Mock account selector
 Account-scoped mock data
-Campaign performance table
-Ad message to landing page table
-Keyword review
-Search term waste review
-Sitelinks, callouts, and structured snippets review
-Budget and bid strategy review
 Ad setup score
 Unique headline recommendations
 Unique description recommendations
 Mock change history
 Use change / accepted tracking workflow
+Production database schema migration
 Health API route
 ```
 
@@ -44,11 +40,36 @@ Health API route
 /admin/google-ads
 /admin/ad-review
 /admin/ai-directions
+/admin/data-health
 /admin/themes
 /admin/url-builder
 /admin/leads
 /api/health
 ```
+
+## Phase 4 Data Foundation
+
+The SQL migration is located at:
+
+```text
+supabase/migrations/001_dynlander_data_foundation.sql
+```
+
+It prepares tables for:
+
+```text
+clients
+google_ads_accounts
+ai_directions
+ad_snapshots
+ad_change_log
+ad_performance_snapshots
+ai_recommendations
+recommendation_results
+lead_events
+```
+
+The `/admin/data-health` page shows the planned production data flow, including setup sync, change detection, performance sync, recommendation matching, before/after evaluation, and rollback recommendation readiness.
 
 ## Phase 3 Ad Review workflow
 
@@ -99,7 +120,7 @@ The current project uses mock data. It does not connect to Google Ads yet.
 
 Do not put Google Ads credentials in browser JavaScript.
 
-The next production phase should add secure server-side Google Ads API routes and Vercel environment variables after the correct Google Ads account is ready.
+The next production phase should connect Supabase first, then add secure server-side Google Ads API routes and Vercel environment variables after the correct Google Ads account is ready.
 
 ## Local commands
 
@@ -111,10 +132,18 @@ npm run build
 
 ## SQL migration needed
 
-No for this demo phase.
+Yes for Phase 4 when you are ready to create the production Supabase database.
 
 ## Vercel ENV needed
 
-No for this demo phase.
+No for the mock demo to build.
 
-The production Google Ads connection will need Google Ads and AI credentials in Vercel environment variables.
+Future Supabase connection will need:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+Future Google Ads and AI connection will need Google Ads and AI credentials in Vercel environment variables.
