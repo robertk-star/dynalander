@@ -45,10 +45,7 @@ export default function AdminShell({
           <a style={navLinkStyle} href="/admin/url-builder">URL Builder</a>
           <a style={navLinkStyle} href="/admin/leads">Leads</a>
           <a style={navLinkStyle} href="/sell?theme=repairs&city=Plano&utm_source=google&utm_medium=cpc&utm_campaign=as-is-repairs">View Landing Page</a>
-          <a style={navLinkStyle} href="/admin/google-ads-connection">Google Ads Connection</a>
-          <a style={navLinkStyle} href="/admin/live-readiness">Live Readiness</a>
-          <a style={navLinkStyle} href="/admin/data-health">Data Health</a>
-          <a style={navLinkStyle} href="/admin/ai-directions">AI Directions</a>
+          <a style={{ ...navLinkStyle, marginTop: 24 }} href="/admin/connection-settings">Connection Settings</a>
         </nav>
       </aside>
       <main style={mainStyle}>
