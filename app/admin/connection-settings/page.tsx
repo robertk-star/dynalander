@@ -13,6 +13,11 @@ const settingsLinks = [
     description: 'Check whether the app is ready before pulling a real Google Ads account.'
   },
   {
+    title: 'Snapshot Preview',
+    href: '/admin/snapshot-preview',
+    description: 'Preview what would be pulled from Google Ads before any setup snapshot is saved.'
+  },
+  {
     title: 'Data Health',
     href: '/admin/data-health',
     description: 'Check Supabase ENV, database tables, seed records, and connected data status.'
