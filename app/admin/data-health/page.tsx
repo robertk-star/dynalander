@@ -1,12 +1,6 @@
 import AdminShell from '../_components/AdminShell';
-import { cardStyle, gridStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
-
-const healthCards = [
-  { label: 'Database connection', value: 'Not connected', note: 'Supabase ENV not added yet.' },
-  { label: 'Google Ads API', value: 'Not connected', note: 'Credentials intentionally not added yet.' },
-  { label: 'AI analysis key', value: 'Not connected', note: 'AI provider key not added yet.' },
-  { label: 'Sync mode', value: 'Mock only', note: 'Demo is using local mock data.' }
-];
+import { cardStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
+import DataHealthStatus from './DataHealthStatus';
 
 const schemaItems = [
   ['clients', 'Stores agency/client accounts.'],
@@ -33,17 +27,9 @@ export default function DataHealthPage() {
   return (
     <AdminShell
       title="Data Health"
-      subtitle="Phase 4 sync-readiness page. This shows the production data foundation before live Supabase, Google Ads, and AI credentials are connected."
+      subtitle="Phase 5 database-readiness page. This checks Supabase environment status and reads client records when the database is connected."
     >
-      <div style={gridStyle}>
-        {healthCards.map((card) => (
-          <div key={card.label} style={cardStyle}>
-            <div style={{ color: '#64748b' }}>{card.label}</div>
-            <strong style={{ fontSize: 28 }}>{card.value}</strong>
-            <p style={{ color: '#64748b', marginBottom: 0 }}>{card.note}</p>
-          </div>
-        ))}
-      </div>
+      <DataHealthStatus />
 
       <section style={twoColumnStyle}>
         <div style={cardStyle}>
@@ -64,12 +50,12 @@ export default function DataHealthPage() {
       </section>
 
       <section style={{ ...cardStyle, border: '1px solid #bfdbfe', background: '#eff6ff' }}>
-        <h2 style={{ marginTop: 0 }}>What Phase 4 prepares</h2>
+        <h2 style={{ marginTop: 0 }}>What Phase 5 verifies</h2>
         <p style={{ color: '#475569', lineHeight: 1.6 }}>
-          The important product feature is historical memory. Once Google Ads is connected, DynLander needs to remember what an ad looked like before, what changed, when it changed, how it performed before, and how it performed after. This page confirms the system is ready for that future data flow.
+          Phase 5 confirms whether the app can see database environment variables and read client records from the database. If no database is connected, the app falls back to mock client records so the demo still works.
         </p>
         <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>
-          No credentials are required for this phase. When you are ready, the next production build should connect Supabase first, then Google Ads server-side API routes.
+          The next production build can add table-level checks, seed records, and server-side saves for AI directions.
         </p>
       </section>
     </AdminShell>
