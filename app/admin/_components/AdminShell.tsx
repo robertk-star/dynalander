@@ -36,6 +36,7 @@ export default function AdminShell({
         </div>
         <nav style={navStyle}>
           <a style={navLinkStyle} href="/admin">Dashboard</a>
+          <a style={navLinkStyle} href="/admin/google-ads">Google Ads Intelligence</a>
           <a style={navLinkStyle} href="/admin/themes">Theme Editor</a>
           <a style={navLinkStyle} href="/admin/url-builder">URL Builder</a>
           <a style={navLinkStyle} href="/admin/leads">Leads</a>
