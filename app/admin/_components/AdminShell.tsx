@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import AdminAccountSelector from './AdminAccountSelector';
+import ActiveAccountBanner from './ActiveAccountBanner';
 import {
   brandStyle,
   mainStyle,
@@ -54,6 +55,7 @@ export default function AdminShell({
           </div>
           {action}
         </div>
+        <ActiveAccountBanner />
         {children}
       </main>
     </div>
