@@ -27,7 +27,7 @@ export default function DataHealthStatus() {
       const [healthResponse, clientsResponse, tablesResponse, googleAdsResponse, metaResponse] = await Promise.all([
         fetch('/api/health/database', { cache: 'no-store' }),
         fetch('/api/admin/clients', { cache: 'no-store' }),
-        fetch('/api/health/database/tables', { cache: 'no-store' }),
+        fetch('/api/health/platform-tables', { cache: 'no-store' }),
         fetch('/api/google-ads/health', { cache: 'no-store' }),
         fetch('/api/meta-ads/status', { cache: 'no-store' })
       ]);
@@ -83,9 +83,9 @@ export default function DataHealthStatus() {
         <table style={tableStyle}>
           <tbody>
             <tr><td style={thTdStyle}>Connection mode</td><td style={thTdStyle}>{metaStatus?.mode || 'mock_only'}</td></tr>
-            <tr><td style={thTdStyle}>meta_ad_snapshots</td><td style={thTdStyle}>{findTable(tables, 'meta_ad_snapshots')?.ok ? 'Ready' : 'Run migration 003 / not checked yet'}</td></tr>
-            <tr><td style={thTdStyle}>meta_change_log</td><td style={thTdStyle}>{findTable(tables, 'meta_change_log')?.ok ? 'Ready' : 'Run migration 003 / not checked yet'}</td></tr>
-            <tr><td style={thTdStyle}>meta_performance_snapshots</td><td style={thTdStyle}>{findTable(tables, 'meta_performance_snapshots')?.ok ? 'Ready' : 'Run migration 003 / not checked yet'}</td></tr>
+            <tr><td style={thTdStyle}>meta_ad_snapshots</td><td style={thTdStyle}>{findTable(tables, 'meta_ad_snapshots')?.ok ? 'Ready' : 'Missing / Error'}</td></tr>
+            <tr><td style={thTdStyle}>meta_change_log</td><td style={thTdStyle}>{findTable(tables, 'meta_change_log')?.ok ? 'Ready' : 'Missing / Error'}</td></tr>
+            <tr><td style={thTdStyle}>meta_performance_snapshots</td><td style={thTdStyle}>{findTable(tables, 'meta_performance_snapshots')?.ok ? 'Ready' : 'Missing / Error'}</td></tr>
           </tbody>
         </table>
       </section>
