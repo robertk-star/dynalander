@@ -1,14 +1,8 @@
-import { getMetaAdsEnvStatus } from '../../../../lib/meta-ads/env';
+import { runMetaReadinessCheck } from '../../../../lib/meta-ads/readOnlyService';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const env = getMetaAdsEnvStatus();
-
-  return Response.json({
-    ok: true,
-    configured: env.configured,
-    mode: env.configured ? 'future_read_only_ready' : 'mock_only',
-    checkedAt: new Date().toISOString()
-  });
+  const result = await runMetaReadinessCheck();
+  return Response.json(result);
 }
