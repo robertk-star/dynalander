@@ -31,6 +31,20 @@ function check(name: string, ok: boolean, status: string, detail?: string): Chec
   return { name, ok, status, detail };
 }
 
+function money(value: string | number | undefined) {
+  const numberValue = Number(value || 0);
+  return `$${numberValue.toFixed(2)}`;
+}
+
+function percent(value: string | number | undefined) {
+  const numberValue = Number(value || 0);
+  return `${numberValue.toFixed(2)}%`;
+}
+
+function numberText(value: string | number | undefined) {
+  return Number(value || 0).toLocaleString();
+}
+
 export async function runMetaReadinessCheck() {
   const env = getMetaAdsEnvStatus();
   const account = getMetaAdsAccountContext();
@@ -97,4 +111,51 @@ export async function runMetaReadinessCheck() {
       checkedAt: new Date().toISOString()
     };
   }
+}
+
+export async function getLiveMetaDataPreview() {
+  const readiness = await runMetaReadinessCheck();
+  const account = getMetaAdsAccountContext();
+  const adAccountId = normalizeAdAccountId(account.adAccountId);
+
+  if (!readiness.ok || !adAccountId) {
+    return { ok: false, source: 'mock_fallback', readiness, summary: null, campaigns: [], adSets: [], ads: [], insights: [], checkedAt: new Date().toISOString() };
+  }
+
+  const [campaignsResult, adSetsResult, adsResult, insightsResult] = await Promise.all([
+    metaGet(`${adAccountId}/campaigns`, { fields: 'id,name,status,effective_status,objective', limit: '25' }),
+    metaGet(`${adAccountId}/adsets`, { fields: 'id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget', limit: '25' }),
+    metaGet(`${adAccountId}/ads`, { fields: 'id,name,campaign_id,adset_id,status,effective_status', limit: '25' }),
+    metaGet(`${adAccountId}/insights`, { fields: 'spend,impressions,clicks,cpm,cpc,ctr,reach,frequency,date_start,date_stop', date_preset: 'last_7d', limit: '25' })
+  ]);
+
+  const insightRows = insightsResult.json?.data || [];
+  const totalSpend = insightRows.reduce((sum: number, row: any) => sum + Number(row.spend || 0), 0);
+  const totalImpressions = insightRows.reduce((sum: number, row: any) => sum + Number(row.impressions || 0), 0);
+  const totalClicks = insightRows.reduce((sum: number, row: any) => sum + Number(row.clicks || 0), 0);
+  const avgCtr = totalImpressions ? (totalClicks / totalImpressions) * 100 : 0;
+  const avgCpc = totalClicks ? totalSpend / totalClicks : 0;
+  const avgCpm = totalImpressions ? (totalSpend / totalImpressions) * 1000 : 0;
+
+  return {
+    ok: true,
+    source: 'meta_live_read_only',
+    readiness,
+    summary: {
+      spend: money(totalSpend),
+      impressions: numberText(totalImpressions),
+      clicks: numberText(totalClicks),
+      ctr: percent(avgCtr),
+      cpc: money(avgCpc),
+      cpm: money(avgCpm),
+      campaignCount: campaignsResult.json?.data?.length || 0,
+      adSetCount: adSetsResult.json?.data?.length || 0,
+      adCount: adsResult.json?.data?.length || 0
+    },
+    campaigns: campaignsResult.json?.data || [],
+    adSets: adSetsResult.json?.data || [],
+    ads: adsResult.json?.data || [],
+    insights: insightRows,
+    checkedAt: new Date().toISOString()
+  };
 }
