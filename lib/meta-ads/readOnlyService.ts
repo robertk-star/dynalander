@@ -200,9 +200,9 @@ export async function getLiveMetaCreativePreview() {
     limit: '50'
   });
 
-  const insightsByAdId = new Map((insightsResult.json?.data || []).map((row: any) => [row.ad_id, row]));
+  const insightsByAdId = new Map<string, any>((insightsResult.json?.data || []).map((row: any) => [row.ad_id, row]));
   const creatives = (adsResult.json?.data || []).map((ad: any) => {
-    const insight = insightsByAdId.get(ad.id) || {};
+    const insight = (insightsByAdId.get(ad.id) || {}) as any;
     const text = creativeText(ad.creative);
     return {
       id: ad.id,
