@@ -17,10 +17,11 @@ type ActivityRow = {
   oldStatus: string;
   newStatus: string;
   note: string;
+  assignedTo?: string;
   changedAt: string;
 };
 
-export default function RecommendationDetailDrawer({ row, note, activity, onClose }: { row: DetailRow; note: string; activity: ActivityRow[]; onClose: () => void }) {
+export default function RecommendationDetailDrawer({ row, note, assignedTo, activity, onClose }: { row: DetailRow; note: string; assignedTo: string; activity: ActivityRow[]; onClose: () => void }) {
   const matchingActivity = activity.filter((item) => item.recommendationTitle === row.recommendation);
 
   return (
@@ -39,6 +40,7 @@ export default function RecommendationDetailDrawer({ row, note, activity, onClos
           <table style={tableStyle}>
             <tbody>
               <tr><td style={thTdStyle}><strong>Status</strong></td><td style={thTdStyle}>{row.status}</td></tr>
+              <tr><td style={thTdStyle}><strong>Assigned to</strong></td><td style={thTdStyle}>{assignedTo || 'Needs review'}</td></tr>
               <tr><td style={thTdStyle}><strong>Linked change</strong></td><td style={thTdStyle}>{row.linkedChange}</td></tr>
               <tr><td style={thTdStyle}><strong>Suggested next action</strong></td><td style={thTdStyle}>{row.nextAction}</td></tr>
             </tbody>
@@ -63,8 +65,8 @@ export default function RecommendationDetailDrawer({ row, note, activity, onClos
         <section style={cardStyle}>
           <h3 style={{ marginTop: 0 }}>Activity history</h3>
           <table style={tableStyle}>
-            <thead><tr><th style={thTdStyle}>Changed</th><th style={thTdStyle}>Old</th><th style={thTdStyle}>New</th><th style={thTdStyle}>Note</th></tr></thead>
-            <tbody>{matchingActivity.length ? matchingActivity.map((item) => <tr key={item.id}><td style={thTdStyle}>{new Date(item.changedAt).toLocaleString()}</td><td style={thTdStyle}>{item.oldStatus}</td><td style={thTdStyle}>{item.newStatus}</td><td style={thTdStyle}>{item.note || '—'}</td></tr>) : <tr><td style={thTdStyle} colSpan={4}>No activity yet for this recommendation.</td></tr>}</tbody>
+            <thead><tr><th style={thTdStyle}>Changed</th><th style={thTdStyle}>Old</th><th style={thTdStyle}>New</th><th style={thTdStyle}>Assigned</th><th style={thTdStyle}>Note</th></tr></thead>
+            <tbody>{matchingActivity.length ? matchingActivity.map((item) => <tr key={item.id}><td style={thTdStyle}>{new Date(item.changedAt).toLocaleString()}</td><td style={thTdStyle}>{item.oldStatus}</td><td style={thTdStyle}>{item.newStatus}</td><td style={thTdStyle}>{item.assignedTo || '—'}</td><td style={thTdStyle}>{item.note || '—'}</td></tr>) : <tr><td style={thTdStyle} colSpan={5}>No activity yet for this recommendation.</td></tr>}</tbody>
           </table>
         </section>
       </aside>
