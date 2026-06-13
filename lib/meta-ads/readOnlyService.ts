@@ -45,6 +45,25 @@ function numberText(value: string | number | undefined) {
   return Number(value || 0).toLocaleString();
 }
 
+function creativeText(creative: any) {
+  const spec = creative?.object_story_spec || {};
+  return {
+    primaryText: spec.link_data?.message || spec.video_data?.message || creative?.body || '—',
+    headline: spec.link_data?.name || spec.video_data?.title || creative?.title || '—',
+    description: spec.link_data?.description || '—',
+    callToAction: spec.link_data?.call_to_action?.type || spec.video_data?.call_to_action?.type || '—',
+    destinationUrl: spec.link_data?.link || spec.video_data?.call_to_action?.value?.link || '—'
+  };
+}
+
+function fatigueLabel(row: any) {
+  const frequency = Number(row.frequency || 0);
+  const ctr = Number(row.ctr || 0);
+  if (frequency >= 2.5 && ctr < 1) return 'Refresh now';
+  if (frequency >= 2 || ctr < 1) return 'Watch';
+  return 'Good';
+}
+
 export async function runMetaReadinessCheck() {
   const env = getMetaAdsEnvStatus();
   const account = getMetaAdsAccountContext();
@@ -158,4 +177,59 @@ export async function getLiveMetaDataPreview() {
     insights: insightRows,
     checkedAt: new Date().toISOString()
   };
+}
+
+export async function getLiveMetaCreativePreview() {
+  const readiness = await runMetaReadinessCheck();
+  const account = getMetaAdsAccountContext();
+  const adAccountId = normalizeAdAccountId(account.adAccountId);
+
+  if (!readiness.ok || !adAccountId) {
+    return { ok: false, source: 'mock_fallback', readiness, creatives: [], checkedAt: new Date().toISOString() };
+  }
+
+  const adsResult = await metaGet(`${adAccountId}/ads`, {
+    fields: 'id,name,status,effective_status,campaign_id,adset_id,creative{id,name,title,body,object_story_spec}',
+    limit: '50'
+  });
+
+  const insightsResult = await metaGet(`${adAccountId}/insights`, {
+    fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,cpm,ctr,reach,frequency,date_start,date_stop',
+    level: 'ad',
+    date_preset: 'last_7d',
+    limit: '50'
+  });
+
+  const insightsByAdId = new Map((insightsResult.json?.data || []).map((row: any) => [row.ad_id, row]));
+  const creatives = (adsResult.json?.data || []).map((ad: any) => {
+    const insight = insightsByAdId.get(ad.id) || {};
+    const text = creativeText(ad.creative);
+    return {
+      id: ad.id,
+      ad: ad.name || ad.id,
+      status: ad.status || '—',
+      effectiveStatus: ad.effective_status || '—',
+      campaignId: ad.campaign_id || '—',
+      adSetId: ad.adset_id || '—',
+      creativeId: ad.creative?.id || '—',
+      creativeName: ad.creative?.name || '—',
+      creativeType: ad.creative?.object_story_spec?.video_data ? 'Video' : 'Image / Link',
+      primaryText: text.primaryText,
+      headline: text.headline,
+      description: text.description,
+      cta: text.callToAction,
+      destinationUrl: text.destinationUrl,
+      frequency: insight.frequency || '0',
+      ctr: insight.ctr ? percent(insight.ctr) : '0.00%',
+      cpc: insight.cpc ? money(insight.cpc) : '$0.00',
+      cpm: insight.cpm ? money(insight.cpm) : '$0.00',
+      spend: insight.spend ? money(insight.spend) : '$0.00',
+      impressions: numberText(insight.impressions || 0),
+      clicks: numberText(insight.clicks || 0),
+      fatigue: fatigueLabel(insight),
+      recommendation: fatigueLabel(insight) === 'Good' ? 'Keep monitoring.' : 'Review copy, creative freshness, and offer match.'
+    };
+  });
+
+  return { ok: true, source: 'meta_live_read_only', readiness, creatives, checkedAt: new Date().toISOString() };
 }
