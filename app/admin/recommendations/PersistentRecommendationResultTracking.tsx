@@ -5,6 +5,7 @@ import { blueButtonStyle, cardStyle, gridStyle, inputStyle, tableStyle, thTdStyl
 import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
 import { googleRecommendationResults, metaRecommendationResults } from './recommendationResultsData';
+import RecommendationDetailDrawer from './RecommendationDetailDrawer';
 
 type ResultRow = typeof googleRecommendationResults[number];
 type ActivityRow = { id: string; recommendationTitle: string; oldStatus: string; newStatus: string; note: string; changedBy: string; changeSource: string; changedAt: string };
@@ -25,6 +26,7 @@ export default function PersistentRecommendationResultTracking() {
   const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [noteFilter, setNoteFilter] = useState('all');
+  const [selectedRow, setSelectedRow] = useState<ResultRow | null>(null);
   const [message, setMessage] = useState('Loading saved recommendation actions...');
   const [source, setSource] = useState('loading');
 
@@ -36,6 +38,7 @@ export default function PersistentRecommendationResultTracking() {
       setActivity([]);
       setStatusFilter('all');
       setNoteFilter('all');
+      setSelectedRow(null);
       setSource('loading');
       setMessage('Loading saved recommendation actions...');
 
@@ -73,6 +76,7 @@ export default function PersistentRecommendationResultTracking() {
     const recommendationKey = keyFor(recommendation);
     const note = notes[recommendationKey] || '';
     setRows((current) => current.map((row) => row.recommendation === recommendation ? { ...row, status } : row));
+    setSelectedRow((current) => current?.recommendation === recommendation ? { ...current, status } : current);
     setMessage('Saving action...');
 
     try {
@@ -104,7 +108,7 @@ export default function PersistentRecommendationResultTracking() {
     <>
       <section style={{ ...cardStyle, border: isMeta ? '1px solid #fed7aa' : '1px solid #bfdbfe', background: isMeta ? '#fff7ed' : '#eff6ff' }}>
         <h2 style={{ marginTop: 0 }}>Recommendation result tracking</h2>
-        <p style={{ color: isMeta ? '#9a3412' : '#475569', fontWeight: 800, lineHeight: 1.6 }}>Filtered tracker with saved statuses, notes, and activity log.</p>
+        <p style={{ color: isMeta ? '#9a3412' : '#475569', fontWeight: 800, lineHeight: 1.6 }}>Filtered tracker with saved statuses, notes, activity log, and detail drawer.</p>
         <p style={{ color: '#64748b', marginBottom: 0 }}><strong>Source:</strong> {source} · {message}</p>
       </section>
 
@@ -141,7 +145,7 @@ export default function PersistentRecommendationResultTracking() {
         <h2 style={{ marginTop: 0 }}>Tracked results</h2>
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Recommendation</th><th style={thTdStyle}>Status</th><th style={thTdStyle}>Note</th><th style={thTdStyle}>Actions</th></tr></thead>
-          <tbody>{visibleRows.map((row) => <tr key={row.recommendation}><td style={thTdStyle}><strong>{row.recommendation}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{row.nextAction}</p></td><td style={thTdStyle}><strong>{row.status}</strong></td><td style={thTdStyle}><textarea style={{ ...inputStyle, minWidth: 240, minHeight: 80 }} value={notes[keyFor(row.recommendation)] || ''} onChange={(event) => updateNote(row.recommendation, event.target.value)} placeholder="Add note..." /></td><td style={thTdStyle}><div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, 'Accepted')}>Accept</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, 'Watching')}>Watching</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, 'Keep')}>Keep</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, isMeta ? 'Refresh' : 'Rollback')}>{isMeta ? 'Refresh' : 'Rollback'}</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, 'Closed')}>Close</button></div></td></tr>)}</tbody>
+          <tbody>{visibleRows.map((row) => <tr key={row.recommendation}><td style={thTdStyle}><strong>{row.recommendation}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{row.nextAction}</p></td><td style={thTdStyle}><strong>{row.status}</strong></td><td style={thTdStyle}><textarea style={{ ...inputStyle, minWidth: 240, minHeight: 80 }} value={notes[keyFor(row.recommendation)] || ''} onChange={(event) => updateNote(row.recommendation, event.target.value)} placeholder="Add note..." /></td><td style={thTdStyle}><div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}><button type="button" style={{ ...smallButton, background: '#0f766e' }} onClick={() => setSelectedRow(row)}>Details</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, 'Accepted')}>Accept</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, 'Watching')}>Watching</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, 'Keep')}>Keep</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, isMeta ? 'Refresh' : 'Rollback')}>{isMeta ? 'Refresh' : 'Rollback'}</button><button type="button" style={smallButton} onClick={() => saveAction(row.recommendation, 'Closed')}>Close</button></div></td></tr>)}</tbody>
         </table>
       </section>
 
@@ -152,6 +156,8 @@ export default function PersistentRecommendationResultTracking() {
           <tbody>{activity.length ? activity.map((row) => <tr key={row.id}><td style={thTdStyle}>{new Date(row.changedAt).toLocaleString()}</td><td style={thTdStyle}>{row.recommendationTitle}</td><td style={thTdStyle}>{row.oldStatus}</td><td style={thTdStyle}>{row.newStatus}</td><td style={thTdStyle}>{row.note || '—'}</td></tr>) : <tr><td style={thTdStyle} colSpan={5}>No activity logged yet.</td></tr>}</tbody>
         </table>
       </section>
+
+      {selectedRow ? <RecommendationDetailDrawer row={selectedRow} note={notes[keyFor(selectedRow.recommendation)] || ''} activity={activity} onClose={() => setSelectedRow(null)} /> : null}
     </>
   );
 }
