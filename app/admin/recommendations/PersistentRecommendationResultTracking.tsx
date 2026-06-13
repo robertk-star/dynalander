@@ -167,7 +167,7 @@ export default function PersistentRecommendationResultTracking() {
         </table>
       </section>
 
-      {selectedRow ? <RecommendationDetailDrawer row={selectedRow} note={notes[keyFor(selectedRow.recommendation)] || ''} activity={activity} onClose={() => setSelectedRow(null)} /> : null}
+      {selectedRow ? <RecommendationDetailDrawer row={selectedRow} note={notes[keyFor(selectedRow.recommendation)] || ''} assignedTo={assignments[keyFor(selectedRow.recommendation)] || 'Needs review'} activity={activity} onClose={() => setSelectedRow(null)} /> : null}
     </>
   );
 }
