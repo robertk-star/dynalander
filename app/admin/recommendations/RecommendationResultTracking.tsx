@@ -7,6 +7,7 @@ import { useActivePlatform } from '../_components/useActivePlatform';
 import { googleRecommendationResults, metaRecommendationResults, resultStages } from './recommendationResultsData';
 
 type ResultRow = typeof googleRecommendationResults[number];
+type ActivityRow = { id: string; recommendationTitle: string; oldStatus: string; newStatus: string; changedBy: string; changeSource: string; changedAt: string };
 
 const actionButtonStyle = { ...blueButtonStyle, padding: '8px 10px', fontSize: 12 };
 
@@ -24,6 +25,7 @@ export default function RecommendationResultTracking() {
   const isMeta = platform === 'meta_ads';
   const defaultRows = isMeta ? metaRecommendationResults : googleRecommendationResults;
   const [rows, setRows] = useState<ResultRow[]>(defaultRows);
+  const [activity, setActivity] = useState<ActivityRow[]>([]);
   const [source, setSource] = useState('loading');
   const [message, setMessage] = useState('');
   const activeWatching = rows.filter((row) => row.status === 'Watching').length;
@@ -36,6 +38,7 @@ export default function RecommendationResultTracking() {
     async function loadStatuses() {
       const baseRows = isMeta ? metaRecommendationResults : googleRecommendationResults;
       setRows(baseRows);
+      setActivity([]);
       setSource('loading');
       setMessage('');
       try {
@@ -43,6 +46,7 @@ export default function RecommendationResultTracking() {
         const result = await response.json();
         if (result.ok && result.statuses) {
           setRows(baseRows.map((row) => ({ ...row, status: result.statuses[keyFor(row.recommendation)] || row.status })));
+          setActivity(result.activity || []);
           setSource(result.source || 'database');
           return;
         }
@@ -66,11 +70,12 @@ export default function RecommendationResultTracking() {
       const response = await fetch('/api/admin/recommendation-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountKey: accountId, adPlatform: platform, recommendationKey, recommendationTitle: recommendation, status })
+        body: JSON.stringify({ accountKey: accountId, adPlatform: platform, recommendationKey, recommendationTitle: recommendation, status, changedBy: 'DynLander Admin' })
       });
       const result = await response.json();
       if (result.ok) {
         setSource(result.source || 'database');
+        setActivity(result.activity || []);
         setMessage(`Saved ${status} to ${result.source || 'database'}.`);
       } else {
         setSource('local');
@@ -112,6 +117,14 @@ export default function RecommendationResultTracking() {
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Recommendation</th><th style={thTdStyle}>Linked change</th><th style={thTdStyle}>Status</th><th style={thTdStyle}>Before</th><th style={thTdStyle}>After</th><th style={thTdStyle}>Next action</th><th style={thTdStyle}>Actions</th></tr></thead>
           <tbody>{rows.map((row) => <tr key={row.recommendation}><td style={thTdStyle}>{row.recommendation}</td><td style={thTdStyle}>{row.linkedChange}</td><td style={thTdStyle}><strong>{row.status}</strong></td><td style={thTdStyle}>{row.before}</td><td style={thTdStyle}>{row.after}</td><td style={thTdStyle}>{row.nextAction}</td><td style={thTdStyle}><div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}><button type="button" style={statusButtonStyle('#2563eb')} onClick={() => updateStatus(row.recommendation, 'Accepted')}>Accept</button><button type="button" style={statusButtonStyle('#7c3aed')} onClick={() => updateStatus(row.recommendation, 'Watching')}>Watching</button><button type="button" style={statusButtonStyle('#15803d')} onClick={() => updateStatus(row.recommendation, 'Keep')}>Keep</button><button type="button" style={statusButtonStyle('#b45309')} onClick={() => updateStatus(row.recommendation, isMeta ? 'Refresh' : 'Rollback')}>{isMeta ? 'Refresh' : 'Rollback'}</button><button type="button" style={statusButtonStyle('#334155')} onClick={() => updateStatus(row.recommendation, 'Closed')}>Close</button></div></td></tr>)}</tbody>
+        </table>
+      </section>
+
+      <section style={cardStyle}>
+        <h2 style={{ marginTop: 0 }}>Recommendation activity log</h2>
+        <table style={tableStyle}>
+          <thead><tr><th style={thTdStyle}>Changed</th><th style={thTdStyle}>Recommendation</th><th style={thTdStyle}>Old status</th><th style={thTdStyle}>New status</th><th style={thTdStyle}>Changed by</th><th style={thTdStyle}>Source</th></tr></thead>
+          <tbody>{activity.length ? activity.map((row) => <tr key={row.id}><td style={thTdStyle}>{new Date(row.changedAt).toLocaleString()}</td><td style={thTdStyle}>{row.recommendationTitle}</td><td style={thTdStyle}>{row.oldStatus}</td><td style={thTdStyle}>{row.newStatus}</td><td style={thTdStyle}>{row.changedBy}</td><td style={thTdStyle}>{row.changeSource}</td></tr>) : <tr><td style={thTdStyle} colSpan={6}>No activity logged yet. Click a status button after running the Phase 24 SQL migration.</td></tr>}</tbody>
         </table>
       </section>
     </>
