@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
+import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
 import { googleRecommendationResults, metaRecommendationResults, resultStages } from './recommendationResultsData';
 
@@ -13,11 +14,18 @@ function statusButtonStyle(background: string) {
   return { ...actionButtonStyle, background };
 }
 
+function keyFor(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
 export default function RecommendationResultTracking() {
   const { platform } = useActivePlatform();
+  const { accountId } = useActiveAccount();
   const isMeta = platform === 'meta_ads';
   const defaultRows = isMeta ? metaRecommendationResults : googleRecommendationResults;
   const [rows, setRows] = useState<ResultRow[]>(defaultRows);
+  const [source, setSource] = useState('loading');
+  const [message, setMessage] = useState('');
   const activeWatching = rows.filter((row) => row.status === 'Watching').length;
   const openRows = rows.filter((row) => row.status === 'Open').length;
   const keepRows = rows.filter((row) => row.status === 'Keep').length;
@@ -25,20 +33,63 @@ export default function RecommendationResultTracking() {
   const actionLabel = isMeta ? 'Rollback / Refresh' : 'Rollback';
 
   useEffect(() => {
-    setRows(isMeta ? metaRecommendationResults : googleRecommendationResults);
-  }, [isMeta]);
+    async function loadStatuses() {
+      const baseRows = isMeta ? metaRecommendationResults : googleRecommendationResults;
+      setRows(baseRows);
+      setSource('loading');
+      setMessage('');
+      try {
+        const response = await fetch(`/api/admin/recommendation-status?accountKey=${encodeURIComponent(accountId)}&adPlatform=${encodeURIComponent(platform)}`, { cache: 'no-store' });
+        const result = await response.json();
+        if (result.ok && result.statuses) {
+          setRows(baseRows.map((row) => ({ ...row, status: result.statuses[keyFor(row.recommendation)] || row.status })));
+          setSource(result.source || 'database');
+          return;
+        }
+        setSource('local');
+        setMessage(result.error ? `Database unavailable: ${result.error}` : 'Using mock defaults.');
+      } catch {
+        setSource('local');
+        setMessage('Using mock defaults. Status load failed.');
+      }
+    }
 
-  function updateStatus(recommendation: string, status: string) {
+    loadStatuses();
+  }, [accountId, isMeta, platform]);
+
+  async function updateStatus(recommendation: string, status: string) {
+    const recommendationKey = keyFor(recommendation);
     setRows((current) => current.map((row) => row.recommendation === recommendation ? { ...row, status } : row));
+    setMessage('Saving status...');
+
+    try {
+      const response = await fetch('/api/admin/recommendation-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountKey: accountId, adPlatform: platform, recommendationKey, recommendationTitle: recommendation, status })
+      });
+      const result = await response.json();
+      if (result.ok) {
+        setSource(result.source || 'database');
+        setMessage(`Saved ${status} to ${result.source || 'database'}.`);
+      } else {
+        setSource('local');
+        setMessage(`Saved on screen only. Database save unavailable: ${result.error || 'not configured'}`);
+      }
+    } catch {
+      setSource('local');
+      setMessage('Saved on screen only. Database save request failed.');
+    }
   }
 
   return (
     <>
       <section style={{ ...cardStyle, border: isMeta ? '1px solid #fed7aa' : '1px solid #bfdbfe', background: isMeta ? '#fff7ed' : '#eff6ff' }}>
         <h2 style={{ marginTop: 0 }}>Recommendation result tracking</h2>
-        <p style={{ color: isMeta ? '#9a3412' : '#475569', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>
-          This mock tracker shows how DynLander will connect an AI recommendation to a saved change, watch the result window, then decide whether to keep, watch, or {actionLabel.toLowerCase()}.
+        <p style={{ color: isMeta ? '#9a3412' : '#475569', fontWeight: 800, lineHeight: 1.6 }}>
+          This tracker connects an AI recommendation to a saved change, watches the result window, then decides whether to keep, watch, or {actionLabel.toLowerCase()}.
         </p>
+        <p style={{ color: '#64748b', marginBottom: 0 }}><strong>Status source:</strong> {source}{message ? ` · ${message}` : ''}</p>
       </section>
 
       <div style={gridStyle}>
@@ -52,7 +103,7 @@ export default function RecommendationResultTracking() {
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Result stages</h2>
         <table style={tableStyle}>
-          <tbody>{resultStages.map((stage) => <tr key={stage}><td style={thTdStyle}><strong>{stage}</strong></td><td style={thTdStyle}>Mock workflow stage for recommendation review.</td></tr>)}</tbody>
+          <tbody>{resultStages.map((stage) => <tr key={stage}><td style={thTdStyle}><strong>{stage}</strong></td><td style={thTdStyle}>Workflow stage for recommendation review.</td></tr>)}</tbody>
         </table>
       </section>
 
