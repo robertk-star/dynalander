@@ -18,6 +18,7 @@ function mapActivity(row: any) {
     recommendationTitle: row.recommendation_title,
     oldStatus: row.old_status || '—',
     newStatus: row.new_status,
+    note: row.note || '',
     changedBy: row.changed_by,
     changeSource: row.change_source,
     changedAt: row.changed_at
@@ -31,20 +32,20 @@ export async function GET(request: Request) {
   const ids = getDemoAccountMap(accountKey);
   const client = getDatabaseClient();
 
-  if (!client) return Response.json({ ok: false, source: 'local', statuses: {}, activity: [] });
+  if (!client) return Response.json({ ok: false, source: 'local', statuses: {}, notes: {}, activity: [] });
 
   const { data, error } = await client
     .from('recommendation_action_status')
-    .select('recommendation_key,status,updated_at')
+    .select('recommendation_key,status,note,updated_at')
     .eq('client_id', ids.clientId)
     .eq('google_ads_account_id', ids.googleAdsAccountId)
     .eq('ad_platform', adPlatform);
 
-  if (error) return Response.json({ ok: false, source: 'database', error: error.message, statuses: {}, activity: [] }, { status: 500 });
+  if (error) return Response.json({ ok: false, source: 'database', error: error.message, statuses: {}, notes: {}, activity: [] }, { status: 500 });
 
   const { data: activityData, error: activityError } = await client
     .from('recommendation_activity_log')
-    .select('id,recommendation_key,recommendation_title,old_status,new_status,changed_by,change_source,changed_at')
+    .select('id,recommendation_key,recommendation_title,old_status,new_status,note,changed_by,change_source,changed_at')
     .eq('client_id', ids.clientId)
     .eq('google_ads_account_id', ids.googleAdsAccountId)
     .eq('ad_platform', adPlatform)
@@ -52,7 +53,8 @@ export async function GET(request: Request) {
     .limit(20);
 
   const statuses = Object.fromEntries((data || []).map((row: any) => [row.recommendation_key, row.status]));
-  return Response.json({ ok: true, source: 'database', adPlatform, statuses, activity: activityError ? [] : (activityData || []).map(mapActivity) });
+  const notes = Object.fromEntries((data || []).map((row: any) => [row.recommendation_key, row.note || '']));
+  return Response.json({ ok: true, source: 'database', adPlatform, statuses, notes, activity: activityError ? [] : (activityData || []).map(mapActivity) });
 }
 
 export async function POST(request: Request) {
@@ -64,13 +66,14 @@ export async function POST(request: Request) {
   const recommendationKey = String(body.recommendationKey || keyFor(recommendationTitle));
   const status = String(body.status || 'Open');
   const changedBy = String(body.changedBy || 'DynLander Admin');
+  const note = String(body.note || '').trim();
 
   if (!client) return Response.json({ ok: false, source: 'local', error: 'Database is not configured.' });
   if (!recommendationKey || !recommendationTitle) return Response.json({ ok: false, source: 'database', error: 'Missing recommendation.' }, { status: 400 });
 
   const { data: existing } = await client
     .from('recommendation_action_status')
-    .select('status')
+    .select('status,note')
     .eq('client_id', ids.clientId)
     .eq('google_ads_account_id', ids.googleAdsAccountId)
     .eq('ad_platform', adPlatform)
@@ -86,13 +89,14 @@ export async function POST(request: Request) {
     recommendation_key: recommendationKey,
     recommendation_title: recommendationTitle,
     status,
+    note,
     updated_at: new Date().toISOString()
   };
 
   const { data, error } = await client
     .from('recommendation_action_status')
     .upsert(payload, { onConflict: 'client_id,google_ads_account_id,ad_platform,recommendation_key' })
-    .select('recommendation_key,status,updated_at')
+    .select('recommendation_key,status,note,updated_at')
     .single();
 
   if (error) return Response.json({ ok: false, source: 'database', error: error.message }, { status: 500 });
@@ -105,6 +109,7 @@ export async function POST(request: Request) {
     recommendation_title: recommendationTitle,
     old_status: oldStatus,
     new_status: status,
+    note,
     changed_by: changedBy,
     change_source: 'recommendation_status_button'
   };
@@ -113,12 +118,12 @@ export async function POST(request: Request) {
 
   const { data: activityData } = await client
     .from('recommendation_activity_log')
-    .select('id,recommendation_key,recommendation_title,old_status,new_status,changed_by,change_source,changed_at')
+    .select('id,recommendation_key,recommendation_title,old_status,new_status,note,changed_by,change_source,changed_at')
     .eq('client_id', ids.clientId)
     .eq('google_ads_account_id', ids.googleAdsAccountId)
     .eq('ad_platform', adPlatform)
     .order('changed_at', { ascending: false })
     .limit(20);
 
-  return Response.json({ ok: true, source: 'database', adPlatform, status: data.status, recommendationKey: data.recommendation_key, updatedAt: data.updated_at, activity: (activityData || []).map(mapActivity) });
+  return Response.json({ ok: true, source: 'database', adPlatform, status: data.status, note: data.note || '', recommendationKey: data.recommendation_key, updatedAt: data.updated_at, activity: (activityData || []).map(mapActivity) });
 }
