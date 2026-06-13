@@ -4,30 +4,33 @@ import DataHealthStatus from './DataHealthStatus';
 
 const schemaItems = [
   ['clients', 'Stores agency/client accounts.'],
-  ['google_ads_accounts', 'Maps clients to Google Ads customer IDs.'],
-  ['ai_directions', 'Stores budget, CPL, approval, and recommendation guardrails.'],
-  ['ad_snapshots', 'Stores each pulled ad setup snapshot.'],
-  ['ad_change_log', 'Stores detected headline, description, sitelink, callout, and URL changes.'],
-  ['ad_performance_snapshots', 'Stores daily ad performance for before/after analysis.'],
+  ['google_ads_accounts', 'Maps clients to demo account IDs and future Google Ads customer IDs.'],
+  ['ai_directions', 'Stores platform-aware budget, CPL, approval, and recommendation guardrails.'],
+  ['ad_snapshots', 'Stores Google ad setup snapshots.'],
+  ['ad_change_log', 'Stores detected Google headline, description, and URL changes.'],
+  ['ad_performance_snapshots', 'Stores Google daily ad performance for before/after analysis.'],
+  ['meta_ad_snapshots', 'Stores Meta mock creative, copy, URL, audience, placement, and fatigue snapshots.'],
+  ['meta_change_log', 'Stores detected Meta primary text, headline, CTA, URL, frequency, and fatigue changes.'],
+  ['meta_performance_snapshots', 'Stores future Meta spend, reach, impressions, frequency, clicks, leads, CTR, CPC, CPM, and CPL.'],
   ['ai_recommendations', 'Stores AI recommendations and status.'],
   ['recommendation_results', 'Stores keep/test/rollback outcome analysis.'],
   ['lead_events', 'Stores form/chat/call lead attribution records.']
 ];
 
 const syncChecklist = [
-  ['Hourly setup sync', 'Pull current campaigns, ads, headlines, descriptions, sitelinks, callouts, snippets, and final URLs.'],
-  ['Change detector', 'Compare newest ad snapshot to previous snapshot and log differences.'],
-  ['Daily performance sync', 'Pull clicks, cost, conversions, leads, and qualified leads by ad.'],
-  ['Recommendation matcher', 'Match detected Google Ads changes to prior AI recommendations.'],
-  ['Before/after evaluator', 'Compare old vs new performance after enough time or clicks.'],
-  ['Rollback recommender', 'Recommend previous best assets when the newer version underperforms.']
+  ['Google setup sync', 'Pull current campaigns, ads, headlines, descriptions, sitelinks, callouts, snippets, and final URLs.'],
+  ['Google change detector', 'Compare newest Google ad snapshot to previous snapshot and log differences.'],
+  ['Meta setup sync', 'Future read-only pull for campaigns, ad sets, ads, creatives, copy, URLs, audiences, placements, and frequency.'],
+  ['Meta change detector', 'Compare newest Meta snapshot to previous snapshot and log creative/copy/fatigue differences.'],
+  ['Performance sync', 'Pull performance by platform after live read-only connections are enabled.'],
+  ['Before/after evaluator', 'Compare old vs new performance after enough time or clicks.']
 ];
 
 export default function DataHealthPage() {
   return (
     <AdminShell
       title="Data Health"
-      subtitle="Phase 5 database-readiness page. This checks Supabase environment status and reads client records when the database is connected."
+      subtitle="Platform-aware readiness page for Supabase, Google Ads, Meta Ads, snapshot tables, AI directions, and future sync checks."
     >
       <DataHealthStatus />
 
@@ -50,12 +53,12 @@ export default function DataHealthPage() {
       </section>
 
       <section style={{ ...cardStyle, border: '1px solid #bfdbfe', background: '#eff6ff' }}>
-        <h2 style={{ marginTop: 0 }}>What Phase 5 verifies</h2>
+        <h2 style={{ marginTop: 0 }}>What Phase 16 verifies</h2>
         <p style={{ color: '#475569', lineHeight: 1.6 }}>
-          Phase 5 confirms whether the app can see database environment variables and read client records from the database. If no database is connected, the app falls back to mock client records so the demo still works.
+          Phase 16 shows database status, client records, Google readiness, Meta readiness, platform-specific snapshot readiness, and platform-aware AI direction readiness.
         </p>
         <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>
-          The next production build can add table-level checks, seed records, and server-side saves for AI directions.
+          Meta remains mock-only. The page is designed to show whether the foundations are ready before any live Meta connection is added.
         </p>
       </section>
     </AdminShell>
