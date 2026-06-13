@@ -6,7 +6,7 @@ import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
 import { getAccountBudgetReview, getAccountPriorityItems } from '../_data/accountScopedData';
 import { metaRecommendations } from '../_data/metaMockData';
-import RecommendationResultTracking from './RecommendationResultTracking';
+import PersistentRecommendationResultTracking from './PersistentRecommendationResultTracking';
 
 const googleActionRows = [
   { action: 'Keep', rule: 'Keep changes that improve qualified lead cost and maintain page match.' },
@@ -88,7 +88,7 @@ export default function RecommendationsPage() {
   return (
     <AdminShell title="Recommendations" subtitle="Platform-aware recommendation hub for Google Ads and Facebook / Meta Ads.">
       {platform === 'meta_ads' ? <MetaRecommendations /> : <GoogleRecommendations />}
-      <RecommendationResultTracking />
+      <PersistentRecommendationResultTracking />
     </AdminShell>
   );
 }
