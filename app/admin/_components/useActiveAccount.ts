@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { googleAdsAccounts } from '../_data/dynlanderAdminData';
 import { activeAccountStorageKey, defaultMetaAccount, getAccountById, type AdminAccountOption } from './AdminAccountSelector';
 import { useActivePlatform } from './useActivePlatform';
+import { useMetaDataMode } from './useMetaDataMode';
 
 export function useActiveAccount() {
   const { platform } = useActivePlatform();
-  const isMeta = platform === 'meta_ads';
+  const { mode } = useMetaDataMode();
+  const isMetaLive = platform === 'meta_ads' && mode === 'live';
   const [accountId, setAccountId] = useState(googleAdsAccounts[0].id);
   const [metaAccount, setMetaAccount] = useState<AdminAccountOption>(defaultMetaAccount);
-  const accountOptions = isMeta ? [metaAccount] : (googleAdsAccounts as AdminAccountOption[]);
+  const accountOptions = isMetaLive ? [metaAccount] : (googleAdsAccounts as AdminAccountOption[]);
 
   useEffect(() => {
     async function loadMetaAccount() {
@@ -31,7 +33,7 @@ export function useActiveAccount() {
       }
     }
 
-    if (isMeta) {
+    if (isMetaLive) {
       loadMetaAccount();
       return;
     }
@@ -52,7 +54,7 @@ export function useActiveAccount() {
 
     window.addEventListener('dynlander-active-account-change', handleAccountChange);
     return () => window.removeEventListener('dynlander-active-account-change', handleAccountChange);
-  }, [isMeta]);
+  }, [isMetaLive]);
 
   return {
     accountId,
