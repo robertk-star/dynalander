@@ -12,6 +12,15 @@ function normalizeAdAccountId(value: string | null) {
   return value.startsWith('act_') ? value : `act_${value}`;
 }
 
+function resolveAdAccountId(activeAccountKey?: string | null) {
+  const account = getMetaAdsAccountContext();
+  const configured = normalizeAdAccountId(account.adAccountId);
+  const requested = normalizeAdAccountId(activeAccountKey || null);
+  if (!requested || requested === 'act_meta-connected-account') return { adAccountId: configured, accountMismatch: false, requested, configured };
+  if (configured && requested === configured) return { adAccountId: configured, accountMismatch: false, requested, configured };
+  return { adAccountId: null, accountMismatch: true, requested, configured };
+}
+
 async function metaGet(path: string, params: Record<string, string>) {
   const env = getMetaAdsEnvStatus();
   const { apiVersion } = getMetaAdsAccountContext();
@@ -64,10 +73,11 @@ function fatigueLabel(row: any) {
   return 'Good';
 }
 
-export async function runMetaReadinessCheck() {
+export async function runMetaReadinessCheck(activeAccountKey?: string | null) {
   const env = getMetaAdsEnvStatus();
   const account = getMetaAdsAccountContext();
-  const adAccountId = normalizeAdAccountId(account.adAccountId);
+  const resolved = resolveAdAccountId(activeAccountKey);
+  const adAccountId = resolved.adAccountId;
   const checks: CheckResult[] = [
     check('App ID', env.hasAppId, env.hasAppId ? 'Found' : 'Missing', env.requiredNames.appId),
     check('App Secret', env.hasAppSecret, env.hasAppSecret ? 'Found' : 'Missing', env.requiredNames.appSecret),
@@ -77,12 +87,29 @@ export async function runMetaReadinessCheck() {
     check('Business ID', env.hasBusinessId, env.hasBusinessId ? 'Found' : 'Optional / Missing', env.requiredNames.businessId)
   ];
 
+  if (resolved.accountMismatch) {
+    checks.push(check('Active account match', false, 'Mismatch', `Selected ${resolved.requested || 'unknown'} but connected ${resolved.configured || 'none'}`));
+    return {
+      ok: false,
+      configured: env.configured,
+      mode: 'active_account_mismatch',
+      adAccountId,
+      requestedAdAccountId: resolved.requested,
+      configuredAdAccountId: resolved.configured,
+      apiVersion: account.apiVersion,
+      checks,
+      checkedAt: new Date().toISOString()
+    };
+  }
+
   if (!env.configured || !adAccountId) {
     return {
       ok: false,
       configured: false,
       mode: 'mock_only',
       adAccountId,
+      requestedAdAccountId: resolved.requested,
+      configuredAdAccountId: resolved.configured,
       apiVersion: account.apiVersion,
       checks,
       checkedAt: new Date().toISOString()
@@ -91,6 +118,7 @@ export async function runMetaReadinessCheck() {
 
   try {
     const accountResult = await metaGet(adAccountId, { fields: 'id,name,account_status,currency,timezone_name' });
+    checks.push(check('Active account match', true, 'Matched', adAccountId));
     checks.push(check('Can reach Meta API', accountResult.response.ok, accountResult.response.ok ? 'Connected' : 'Failed', accountResult.json?.error?.message));
     checks.push(check('Can read ad account', accountResult.response.ok && Boolean(accountResult.json?.id), accountResult.json?.name || 'Not readable', accountResult.json?.error?.message));
 
@@ -106,13 +134,15 @@ export async function runMetaReadinessCheck() {
     const insightsResult = await metaGet(`${adAccountId}/insights`, { fields: 'spend,impressions,clicks,cpm,cpc,ctr,date_start,date_stop', date_preset: 'last_7d', limit: '5' });
     checks.push(check('Can read insights', insightsResult.response.ok, insightsResult.response.ok ? `${insightsResult.json?.data?.length || 0} rows returned` : 'Failed', insightsResult.json?.error?.message));
 
-    const liveOk = checks.filter((item) => item.name.startsWith('Can ')).every((item) => item.ok);
+    const liveOk = checks.filter((item) => item.name.startsWith('Can ') || item.name === 'Active account match').every((item) => item.ok);
 
     return {
       ok: liveOk,
       configured: true,
       mode: 'read_only_live_check',
       adAccountId,
+      requestedAdAccountId: resolved.requested,
+      configuredAdAccountId: resolved.configured,
       apiVersion: account.apiVersion,
       account: accountResult.json?.error ? null : accountResult.json,
       checks,
@@ -125,6 +155,8 @@ export async function runMetaReadinessCheck() {
       configured: true,
       mode: 'read_only_live_check_failed',
       adAccountId,
+      requestedAdAccountId: resolved.requested,
+      configuredAdAccountId: resolved.configured,
       apiVersion: account.apiVersion,
       checks,
       checkedAt: new Date().toISOString()
@@ -132,10 +164,9 @@ export async function runMetaReadinessCheck() {
   }
 }
 
-export async function getLiveMetaDataPreview() {
-  const readiness = await runMetaReadinessCheck();
-  const account = getMetaAdsAccountContext();
-  const adAccountId = normalizeAdAccountId(account.adAccountId);
+export async function getLiveMetaDataPreview(activeAccountKey?: string | null) {
+  const readiness = await runMetaReadinessCheck(activeAccountKey);
+  const adAccountId = readiness.adAccountId;
 
   if (!readiness.ok || !adAccountId) {
     return { ok: false, source: 'mock_fallback', readiness, summary: null, campaigns: [], adSets: [], ads: [], insights: [], checkedAt: new Date().toISOString() };
@@ -158,8 +189,9 @@ export async function getLiveMetaDataPreview() {
 
   return {
     ok: true,
-    source: 'meta_live_read_only',
+    source: 'meta_live_read_only_active_account',
     readiness,
+    activeAccount: readiness.account,
     summary: {
       spend: money(totalSpend),
       impressions: numberText(totalImpressions),
@@ -179,10 +211,9 @@ export async function getLiveMetaDataPreview() {
   };
 }
 
-export async function getLiveMetaCreativePreview() {
-  const readiness = await runMetaReadinessCheck();
-  const account = getMetaAdsAccountContext();
-  const adAccountId = normalizeAdAccountId(account.adAccountId);
+export async function getLiveMetaCreativePreview(activeAccountKey?: string | null) {
+  const readiness = await runMetaReadinessCheck(activeAccountKey);
+  const adAccountId = readiness.adAccountId;
 
   if (!readiness.ok || !adAccountId) {
     return { ok: false, source: 'mock_fallback', readiness, creatives: [], checkedAt: new Date().toISOString() };
@@ -231,5 +262,5 @@ export async function getLiveMetaCreativePreview() {
     };
   });
 
-  return { ok: true, source: 'meta_live_read_only', readiness, creatives, checkedAt: new Date().toISOString() };
+  return { ok: true, source: 'meta_live_read_only_active_account', readiness, activeAccount: readiness.account, creatives, checkedAt: new Date().toISOString() };
 }
