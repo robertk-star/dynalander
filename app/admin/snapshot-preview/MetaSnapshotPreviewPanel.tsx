@@ -54,13 +54,13 @@ export default function MetaSnapshotPreviewPanel() {
       });
       const result = await response.json();
       if (result.ok) {
-        setMessage(`Saved ${result.saved} ${variant} Meta mock snapshot rows for ${selectedAccount.name}.`);
+        setMessage(`Saved ${result.saved} ${variant} internal Meta snapshot rows for ${selectedAccount.name}.`);
         await loadMetaHistory();
       } else {
-        setMessage(`Meta snapshot was not saved: ${result.error || 'database unavailable'}`);
+        setMessage(`Internal Meta snapshot was not saved: ${result.error || 'database unavailable'}`);
       }
     } catch {
-      setMessage('Meta snapshot save failed. Check the database connection.');
+      setMessage('Internal Meta snapshot save failed. Check the database connection.');
     } finally {
       setSaving(false);
     }
@@ -77,13 +77,13 @@ export default function MetaSnapshotPreviewPanel() {
       });
       const result = await response.json();
       if (result.ok) {
-        setMessage(`Detected ${result.detected} Meta changes and inserted ${result.inserted} change log rows.`);
+        setMessage(`Detected ${result.detected} internal Meta changes and inserted ${result.inserted} change log rows.`);
         await loadMetaHistory();
       } else {
-        setMessage(`Meta change detection failed: ${result.error || 'database unavailable'}`);
+        setMessage(`Internal Meta change detection failed: ${result.error || 'database unavailable'}`);
       }
     } catch {
-      setMessage('Meta change detection failed. Check the database connection.');
+      setMessage('Internal Meta change detection failed. Check the database connection.');
     } finally {
       setSaving(false);
     }
@@ -94,27 +94,30 @@ export default function MetaSnapshotPreviewPanel() {
   const isLive = Boolean(!isDemoMode && livePreview?.ok && livePreview.summary);
   const cards = [
     { label: 'Preview mode', value: isLive ? 'Meta live read-only' : isDemoMode ? 'Meta demo / mock' : 'Meta mock fallback', note: isLive ? 'Live Meta data is previewed only.' : 'No live Meta data is pulled.' },
+    { label: 'Internal snapshot only', value: 'Yes', note: 'Snapshot buttons create DynLander internal rows only.' },
+    { label: 'Meta account changes', value: 'None', note: 'This screen does not change Meta campaigns, ad sets, ads, or budgets.' },
     { label: 'Campaigns', value: String(isLive ? livePreview?.summary?.campaignCount ?? 0 : metaCampaigns.length), note: 'Campaigns that would be reviewed.' },
     { label: 'Ad sets', value: String(isLive ? livePreview?.summary?.adSetCount ?? 0 : metaAdSets.length), note: 'Ad sets that include targeting and placement summary.' },
     { label: 'Ads / creatives', value: String(isLive ? livePreview?.summary?.adCount ?? 0 : metaCreatives.length), note: 'Creative copy and destination data to snapshot.' },
     { label: 'Spend', value: isLive ? livePreview?.summary?.spend || '$0.00' : 'Mock only', note: 'Last 7 days when live.' },
-    { label: 'Saved rows', value: String(history?.snapshots.length ?? 0), note: history?.ok ? 'Saved Meta snapshot rows found.' : 'No saved rows or database unavailable.' },
-    { label: 'Detected changes', value: String(changes?.changes.length ?? 0), note: changes?.ok ? 'Meta change log rows found.' : 'No changes or database unavailable.' }
+    { label: 'Saved rows', value: String(history?.snapshots.length ?? 0), note: history?.ok ? 'Saved internal Meta snapshot rows found.' : 'No saved rows or database unavailable.' },
+    { label: 'Detected changes', value: String(changes?.changes.length ?? 0), note: changes?.ok ? 'Internal Meta change log rows found.' : 'No changes or database unavailable.' }
   ];
 
   return (
     <>
       <section style={{ ...cardStyle, border: isLive ? '2px solid #0f766e' : '2px solid #f97316', background: isLive ? '#f0fdfa' : '#fff7ed' }}>
-        <h2 style={{ marginTop: 0 }}>Meta preview, save, and detect changes</h2>
+        <h2 style={{ marginTop: 0 }}>Meta read-only preview and internal snapshot lock</h2>
         <p style={{ color: isLive ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6 }}>
-          {isLive ? 'This page previews live Meta read-only data before any internal snapshot work. It does not save live Meta data or change Meta ads.' : 'This Meta flow is using demo/mock data. It does not pull live Meta data or change Facebook / Meta ads.'}
+          {isLive ? 'This page previews live Meta data in read-only mode. The snapshot buttons below create DynLander internal rows only.' : 'This Meta flow is using demo/mock data. It does not pull live Meta data or change Facebook / Meta ads.'}
         </p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button type="button" onClick={loadMetaHistory} disabled={loading || saving} style={blueButtonStyle}>{loading ? 'Checking...' : 'Refresh Preview'}</button>
-          <button type="button" onClick={() => saveMetaMockSnapshot('base')} disabled={saving} style={{ ...blueButtonStyle, background: '#334155' }}>{saving ? 'Working...' : 'Save Meta Mock Snapshot'}</button>
-          <button type="button" onClick={() => saveMetaMockSnapshot('changed')} disabled={saving} style={{ ...blueButtonStyle, background: '#334155' }}>{saving ? 'Working...' : 'Save Changed Meta Mock Snapshot'}</button>
-          <button type="button" onClick={detectMetaChanges} disabled={saving} style={{ ...blueButtonStyle, background: '#0f766e' }}>{saving ? 'Working...' : 'Detect Meta Changes'}</button>
+          <button type="button" onClick={loadMetaHistory} disabled={loading || saving} style={blueButtonStyle}>{loading ? 'Checking...' : 'Refresh Read-Only Preview'}</button>
+          <button type="button" onClick={() => saveMetaMockSnapshot('base')} disabled={saving} style={{ ...blueButtonStyle, background: '#334155' }}>{saving ? 'Working...' : 'Save Internal Snapshot Only'}</button>
+          <button type="button" onClick={() => saveMetaMockSnapshot('changed')} disabled={saving} style={{ ...blueButtonStyle, background: '#334155' }}>{saving ? 'Working...' : 'Save Changed Internal Snapshot Only'}</button>
+          <button type="button" onClick={detectMetaChanges} disabled={saving} style={{ ...blueButtonStyle, background: '#0f766e' }}>{saving ? 'Working...' : 'Detect Internal Changes'}</button>
         </div>
+        <p style={{ color: '#9a3412', fontWeight: 800, lineHeight: 1.6 }}>Read-only preview · Internal snapshot rows only · No Meta account changes</p>
         {message ? <p style={{ color: message.startsWith('Saved') || message.startsWith('Detected') ? '#166534' : '#9a3412', fontWeight: 800 }}>{message}</p> : null}
       </section>
 
@@ -122,6 +125,7 @@ export default function MetaSnapshotPreviewPanel() {
 
       {isLive ? <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Live Meta campaigns that would be snapshotted</h2>
+        <p style={{ color: '#64748b', lineHeight: 1.6 }}>Preview only. These campaign rows are not saved as live Meta records.</p>
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Objective</th><th style={thTdStyle}>Status</th><th style={thTdStyle}>Effective status</th><th style={thTdStyle}>ID</th></tr></thead>
           <tbody>{(livePreview?.campaigns ?? []).map((row) => <tr key={row.id}><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.objective || '—'}</td><td style={thTdStyle}>{row.status || '—'}</td><td style={thTdStyle}>{row.effective_status || '—'}</td><td style={thTdStyle}>{row.id}</td></tr>)}</tbody>
@@ -130,6 +134,7 @@ export default function MetaSnapshotPreviewPanel() {
 
       {isLive ? <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Live Meta ads that would be snapshotted</h2>
+        <p style={{ color: '#64748b', lineHeight: 1.6 }}>Preview only. These ad rows are not saved as live Meta records.</p>
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Ad</th><th style={thTdStyle}>Status</th><th style={thTdStyle}>Effective status</th><th style={thTdStyle}>Campaign ID</th><th style={thTdStyle}>Ad set ID</th></tr></thead>
           <tbody>{(livePreview?.ads ?? []).map((row) => <tr key={row.id}><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.status || '—'}</td><td style={thTdStyle}>{row.effective_status || '—'}</td><td style={thTdStyle}>{row.campaign_id || '—'}</td><td style={thTdStyle}>{row.adset_id || '—'}</td></tr>)}</tbody>
@@ -137,7 +142,7 @@ export default function MetaSnapshotPreviewPanel() {
       </section> : null}
 
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Detected Meta change log</h2>
+        <h2 style={{ marginTop: 0 }}>Detected internal Meta change log</h2>
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Detected</th><th style={thTdStyle}>Ad ID</th><th style={thTdStyle}>Asset</th><th style={thTdStyle}>Old value</th><th style={thTdStyle}>New value</th></tr></thead>
           <tbody>{(changes?.changes ?? []).map((row) => <tr key={row.id}><td style={thTdStyle}>{new Date(row.detected_at).toLocaleString()}</td><td style={thTdStyle}>{row.ad_id}</td><td style={thTdStyle}>{row.asset_type}</td><td style={thTdStyle}>{row.old_value}</td><td style={thTdStyle}>{row.new_value}</td></tr>)}</tbody>
@@ -145,7 +150,7 @@ export default function MetaSnapshotPreviewPanel() {
       </section>
 
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Saved Meta snapshot history</h2>
+        <h2 style={{ marginTop: 0 }}>Saved internal Meta snapshot history</h2>
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Saved at</th><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Ad set</th><th style={thTdStyle}>Ad</th><th style={thTdStyle}>Type</th><th style={thTdStyle}>URL</th></tr></thead>
           <tbody>{(history?.snapshots ?? []).map((row) => <tr key={row.id}><td style={thTdStyle}>{new Date(row.snapshot_at).toLocaleString()}</td><td style={thTdStyle}>{row.campaign_name}</td><td style={thTdStyle}>{row.ad_set_name}</td><td style={thTdStyle}>{row.ad_name}</td><td style={thTdStyle}>{row.creative_type}</td><td style={thTdStyle}>{row.destination_url}</td></tr>)}</tbody>
