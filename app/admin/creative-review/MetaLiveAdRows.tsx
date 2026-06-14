@@ -23,8 +23,10 @@ export default function MetaLiveAdRows() {
   const isDemoMode = mode === 'demo';
   const [data, setData] = useState<PreviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [usedFallback, setUsedFallback] = useState(false);
 
   async function loadRows() {
+    setUsedFallback(false);
     if (isDemoMode) {
       setData(null);
       setLoading(false);
@@ -32,8 +34,17 @@ export default function MetaLiveAdRows() {
     }
     setLoading(true);
     try {
-      const response = await fetch(`/api/meta-ads/read-only-preview?accountKey=${encodeURIComponent(selectedAccount.customerId)}`, { cache: 'no-store' });
-      setData(await response.json());
+      const scopedResponse = await fetch(`/api/meta-ads/read-only-preview?accountKey=${encodeURIComponent(selectedAccount.customerId)}`, { cache: 'no-store' });
+      const scopedResult = await scopedResponse.json();
+      if (scopedResult.ok && Array.isArray(scopedResult.ads) && scopedResult.ads.length > 0) {
+        setData(scopedResult);
+        return;
+      }
+
+      const fallbackResponse = await fetch('/api/meta-ads/read-only-preview', { cache: 'no-store' });
+      const fallbackResult = await fallbackResponse.json();
+      setUsedFallback(Boolean(fallbackResult.ok));
+      setData(fallbackResult);
     } catch {
       setData(null);
     } finally {
@@ -45,7 +56,7 @@ export default function MetaLiveAdRows() {
 
   const insightMap = new Map((data?.insights || []).map((row) => [row.ad_id || '', row]));
   const rows = (data?.ads || []).map((ad) => ({ ad, insight: insightMap.get(ad.id) || {} }));
-  const liveReady = Boolean(!isDemoMode && data?.ok);
+  const liveReady = Boolean(!isDemoMode && data?.ok && rows.length > 0);
 
   return (
     <>
@@ -54,7 +65,7 @@ export default function MetaLiveAdRows() {
           <div>
             <h2 style={{ marginTop: 0 }}>Meta live ad review</h2>
             <p style={{ color: liveReady ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>
-              {liveReady ? `Showing live ad rows for ${selectedAccount.name}.` : `Live ad rows are not available for ${selectedAccount.name}.`}
+              {liveReady ? `Showing live ad rows for ${selectedAccount.name}${usedFallback ? ' using the connected Meta account fallback' : ''}.` : `Live ad rows are not available for ${selectedAccount.name}.`}
             </p>
           </div>
           <button type="button" onClick={loadRows} style={blueButtonStyle}>{loading ? 'Checking...' : isDemoMode ? 'Demo mode active' : 'Refresh live rows'}</button>
@@ -64,7 +75,7 @@ export default function MetaLiveAdRows() {
       <div style={gridStyle}>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Active account</div><strong style={{ fontSize: 28 }}>{selectedAccount.name}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{selectedAccount.customerId}</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 28 }}>{liveReady ? 'Live read only' : isDemoMode ? 'Demo' : 'Not live'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{data?.source || 'No live rows loaded.'}</p></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Ads returned</div><strong style={{ fontSize: 28 }}>{rows.length}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>From the active account.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Ads returned</div><strong style={{ fontSize: 28 }}>{rows.length}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>From the active account or connected-account fallback.</p></div>
       </div>
 
       <section style={cardStyle}>
