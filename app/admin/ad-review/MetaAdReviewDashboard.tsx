@@ -1,58 +1,128 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { cardStyle, inputStyle, labelStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
+import { useEffect, useMemo, useState } from 'react';
+import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
+import { useMetaDataMode } from '../_components/useMetaDataMode';
 import { metaCreatives } from '../_data/metaMockData';
+
+type CreativeRow = {
+  id: string;
+  ad: string;
+  status: string;
+  effectiveStatus: string;
+  creativeType: string;
+  primaryText: string;
+  headline: string;
+  description: string;
+  cta: string;
+  destinationUrl: string;
+  frequency: string;
+  ctr: string;
+  cpc: string;
+  cpm: string;
+  spend: string;
+  impressions: string;
+  clicks: string;
+  fatigue: string;
+  recommendation: string;
+};
+
+type ReviewData = { ok: boolean; source: string; creatives: CreativeRow[]; error?: string };
+
+function mockRows(): CreativeRow[] {
+  return metaCreatives.map((row) => ({
+    id: row.ad,
+    ad: row.ad,
+    status: 'Mock',
+    effectiveStatus: 'Mock',
+    creativeType: row.creativeType,
+    primaryText: row.primaryText,
+    headline: row.headline,
+    description: row.description,
+    cta: row.cta,
+    destinationUrl: row.destinationUrl,
+    frequency: row.frequency,
+    ctr: row.ctr,
+    cpc: '—',
+    cpm: '—',
+    spend: '—',
+    impressions: '—',
+    clicks: '—',
+    fatigue: row.fatigue,
+    recommendation: row.recommendation
+  }));
+}
 
 export default function MetaAdReviewDashboard() {
   const { selectedAccount } = useActiveAccount();
-  const [adName, setAdName] = useState(metaCreatives[0]?.ad || '');
-  const [accepted, setAccepted] = useState<string[]>([]);
-  const creative = useMemo(() => metaCreatives.find((item) => item.ad === adName) || metaCreatives[0], [adName]);
-  const score = creative.fatigue === 'Good' ? '88' : creative.fatigue === 'Watch' ? '78' : '68';
-  const rows = [
-    ['Primary text', creative.primaryText, creative.recommendation],
-    ['Headline', creative.headline, creative.fatigue === 'Good' ? 'Keep current headline' : 'Test a clearer benefit-driven headline'],
-    ['CTA', creative.cta, creative.cta === 'Get Quote' ? 'Test Learn More' : 'Keep current CTA'],
-    ['Destination URL', creative.destinationUrl, 'Confirm landing page matches the ad promise']
-  ];
+  const { mode } = useMetaDataMode();
+  const isDemoMode = mode === 'demo';
+  const [data, setData] = useState<ReviewData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('Loading Meta ad review data...');
 
-  function markAccepted(label: string) {
-    setAccepted((current) => current.includes(label) ? current : [...current, label]);
+  async function loadReview() {
+    if (isDemoMode) {
+      setData(null);
+      setLoading(false);
+      setMessage('Showing demo/mock Meta ad review. Switch Meta Data Mode to Connected Live Meta Account to read Meta ads.');
+      return;
+    }
+
+    setLoading(true);
+    setMessage('Loading Meta ad review data...');
+    try {
+      const response = await fetch('/api/meta-ads/ad-review-data', { cache: 'no-store' });
+      const result = await response.json();
+      setData(result);
+      setMessage(result.ok ? 'Showing live Meta read-only ad review data.' : 'Showing mock fallback because live Meta ad review data is not readable yet.');
+    } catch {
+      setData(null);
+      setMessage('Showing mock fallback because the Meta ad review request failed.');
+    } finally {
+      setLoading(false);
+    }
   }
+
+  useEffect(() => { loadReview(); }, [isDemoMode]);
+
+  const isLive = Boolean(!isDemoMode && data?.ok && data.creatives?.length);
+  const rows = useMemo(() => isLive ? data?.creatives || [] : mockRows(), [isLive, data]);
+  const watchCount = rows.filter((row) => row.fatigue !== 'Good').length;
+  const activeCount = rows.filter((row) => row.effectiveStatus === 'ACTIVE' || row.status === 'ACTIVE').length;
 
   return (
     <>
-      <section style={cardStyle}>
-        <div style={twoColumnStyle}>
-          <label style={labelStyle}>Select Meta ad / creative<select style={inputStyle} value={adName} onChange={(event) => setAdName(event.target.value)}>{metaCreatives.map((item) => <option key={item.ad} value={item.ad}>{item.ad}</option>)}</select></label>
-          <div><div style={{ color: '#64748b', fontWeight: 800, fontSize: 13 }}>Meta creative score</div><strong style={{ fontSize: 36 }}>{score} / 100</strong><p style={{ color: '#64748b', margin: 0 }}>Mock score based on copy clarity, CTA match, URL match, CTR, CPL, frequency, and fatigue.</p></div>
+      <section style={{ ...cardStyle, border: isLive ? '2px solid #0f766e' : '2px solid #f97316', background: isLive ? '#f0fdfa' : '#fff7ed' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
+          <div>
+            <h2 style={{ marginTop: 0 }}>Meta ad review</h2>
+            <p style={{ color: isLive ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{message}</p>
+          </div>
+          <button type="button" onClick={loadReview} style={blueButtonStyle}>{loading ? 'Checking...' : isDemoMode ? 'Demo mode active' : 'Refresh live review'}</button>
         </div>
       </section>
 
-      <section style={{ ...cardStyle, border: '1px solid #fed7aa', background: '#fff7ed' }}>
-        <h2 style={{ marginTop: 0 }}>Meta ad review workflow</h2>
-        <p style={{ color: '#9a3412', fontWeight: 800, lineHeight: 1.6 }}>This is mock-only. DynLander is reviewing Meta creative data, but it does not pull live Meta data or change Facebook / Meta ads.</p>
-      </section>
-
-      <section style={twoColumnStyle}>
-        <div style={cardStyle}><h2 style={{ marginTop: 0 }}>Current Meta setup</h2><p><strong>Campaign:</strong> {creative.campaign}</p><p><strong>Ad set:</strong> {creative.adSet}</p><p><strong>Creative type:</strong> {creative.creativeType}</p><p><strong>Destination:</strong> {creative.destinationUrl}</p><p><strong>Active account:</strong> {selectedAccount.name}</p></div>
-        <div style={{ ...cardStyle, border: '1px solid #fed7aa', background: '#fff7ed' }}><h2 style={{ marginTop: 0 }}>Top fixes</h2><ol style={{ lineHeight: 1.7 }}><li><strong>Watch frequency</strong> before scaling creative spend.</li><li><strong>Keep the CTA soft</strong> for inherited and as-is seller intent.</li><li><strong>Match the landing page</strong> to the ad promise before copying into Meta.</li></ol></div>
-      </section>
-
-      <section style={twoColumnStyle}>
-        <div style={cardStyle}><h2 style={{ marginTop: 0 }}>Current creative copy</h2><table style={tableStyle}><tbody><tr><td style={thTdStyle}>Primary text</td><td style={thTdStyle}>{creative.primaryText}</td></tr><tr><td style={thTdStyle}>Headline</td><td style={thTdStyle}>{creative.headline}</td></tr><tr><td style={thTdStyle}>Description</td><td style={thTdStyle}>{creative.description}</td></tr><tr><td style={thTdStyle}>CTA</td><td style={thTdStyle}>{creative.cta}</td></tr><tr><td style={thTdStyle}>Destination URL</td><td style={thTdStyle}>{creative.destinationUrl}</td></tr></tbody></table></div>
-        <div style={cardStyle}><h2 style={{ marginTop: 0 }}>Meta performance signals</h2><table style={tableStyle}><tbody><tr><td style={thTdStyle}>Fatigue</td><td style={thTdStyle}>{creative.fatigue}</td></tr><tr><td style={thTdStyle}>Frequency</td><td style={thTdStyle}>{creative.frequency}</td></tr><tr><td style={thTdStyle}>CTR</td><td style={thTdStyle}>{creative.ctr}</td></tr><tr><td style={thTdStyle}>CPL</td><td style={thTdStyle}>{creative.cpl}</td></tr></tbody></table></div>
-      </section>
+      <div style={gridStyle}>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 26 }}>{isLive ? 'Live read-only' : isDemoMode ? 'Demo / Mock' : 'Mock fallback'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{isLive ? data?.source : 'No live write actions.'}</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Active account</div><strong style={{ fontSize: 26 }}>{selectedAccount.name}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Selected account context.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Ads reviewed</div><strong style={{ fontSize: 26 }}>{rows.length}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Readable ads in live mode.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Active ads</div><strong style={{ fontSize: 26 }}>{activeCount}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Returned as active by Meta.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Needs review</div><strong style={{ fontSize: 26 }}>{watchCount}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Fatigue or weak performance signals.</p></div>
+      </div>
 
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Recommended Meta changes to track</h2>
+        <h2 style={{ marginTop: 0 }}>{isLive ? 'Live Meta ad review rows' : 'Mock Meta ad review rows'}</h2>
         <table style={tableStyle}>
-          <thead><tr><th style={thTdStyle}>Item</th><th style={thTdStyle}>Current</th><th style={thTdStyle}>Recommendation</th><th style={thTdStyle}>Track</th></tr></thead>
-          <tbody>{rows.map((row) => <tr key={row[0]}><td style={thTdStyle}>{row[0]}</td><td style={thTdStyle}>{row[1]}</td><td style={thTdStyle}>{row[2]}</td><td style={thTdStyle}><button type="button" onClick={() => markAccepted(row[0])}>{accepted.includes(row[0]) ? 'Accepted' : 'Use change'}</button></td></tr>)}</tbody>
+          <thead><tr><th style={thTdStyle}>Ad</th><th style={thTdStyle}>Status</th><th style={thTdStyle}>Type</th><th style={thTdStyle}>Primary text</th><th style={thTdStyle}>Headline</th><th style={thTdStyle}>CTA</th><th style={thTdStyle}>URL</th><th style={thTdStyle}>Frequency</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Recommendation</th></tr></thead>
+          <tbody>{rows.map((row) => <tr key={row.id}><td style={thTdStyle}>{row.ad}</td><td style={thTdStyle}>{row.effectiveStatus || row.status}</td><td style={thTdStyle}>{row.creativeType}</td><td style={thTdStyle}>{row.primaryText}</td><td style={thTdStyle}>{row.headline}</td><td style={thTdStyle}>{row.cta}</td><td style={thTdStyle}>{row.destinationUrl}</td><td style={thTdStyle}>{row.frequency}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.recommendation}</td></tr>)}</tbody>
         </table>
-        {accepted.length > 0 ? <p style={{ color: '#166534', fontWeight: 800 }}>Accepted in this demo: {accepted.join(', ')}. In production this creates a Meta change log record tied to the active account and ad ID.</p> : null}
+      </section>
+
+      <section style={{ ...cardStyle, border: '1px solid #f97316', background: '#fff7ed' }}>
+        <h2 style={{ marginTop: 0 }}>Read-only lock</h2>
+        <p style={{ color: '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>This page reads Meta ad data only. It does not edit ads, copy, URLs, CTAs, budgets, campaigns, or ad sets.</p>
       </section>
     </>
   );
