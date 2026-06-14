@@ -7,13 +7,15 @@ import { useActivePlatform } from '../_components/useActivePlatform';
 import { useMetaDataMode } from '../_components/useMetaDataMode';
 
 type Targeting = { ageMin: string; ageMax: string; genders: string; countries: string; regions: string; cities: string; customAudienceCount: number; customAudiences: string[]; excludedCustomAudienceCount: number; excludedCustomAudiences: string[]; publisherPlatforms: string; rawReturned: boolean };
-type Creative = { primaryText: string; headline: string; description: string; cta: string; destinationUrl: string; imageUrl: string; format: string; objectStoryId?: string; urlTags?: string; readSource?: string };
+type FieldSources = { primaryText?: string; headline?: string; description?: string; cta?: string; destinationUrl?: string; imageUrl?: string };
+type Creative = { primaryText: string; headline: string; description: string; cta: string; destinationUrl: string; imageUrl: string; format: string; objectStoryId?: string; urlTags?: string; readSource?: string; fieldSources?: FieldSources };
 type SetupAd = { id: string; name: string; status: string; effectiveStatus: string; campaign: { id: string; name: string; objective: string; status: string }; adSet: { id: string; name: string; status: string; dailyBudget: string; lifetimeBudget: string; optimizationGoal: string; billingEvent: string; bidStrategy: string; targeting: Targeting }; creative: Creative };
 type ApiData = { ok: boolean; source: string; creativeMode?: string; creativeWarning?: string | null; ads: SetupAd[]; error?: string };
 type Rec = { area: string; current: string; recommendation: string; reason: string };
 
 function missing(value?: string) { return !value || value === '—' || value === 'Not returned by Meta'; }
 function isImageBasedAd(ad: SetupAd) { return Boolean(ad.creative.imageUrl && missing(ad.creative.primaryText) && missing(ad.creative.headline)); }
+function sourceLabel(source?: string) { return !source || source === 'not_found' ? 'Not found in Meta fields checked' : source; }
 
 function buildSetupRecommendations(ad: SetupAd): Rec[] {
   const recs: Rec[] = [];
@@ -47,6 +49,28 @@ function buildImageReview(ad: SetupAd): Rec[] {
     { area: 'CTA visibility', current: 'CTA appears inside the image', recommendation: 'Make sure the CTA is readable at small screen size and matches the landing page action.', reason: 'A visible CTA can improve click intent.' },
     { area: 'Trust / clarity', current: 'Benefit-focused image', recommendation: 'Test one version that makes the service/process clearer in plain language.', reason: 'People may need to quickly understand what happens after they click.' }
   ];
+}
+
+function FieldSourceDebug({ ad }: { ad: SetupAd }) {
+  const sources = ad.creative.fieldSources || {};
+  const rows = [
+    { field: 'Primary text', value: ad.creative.primaryText, source: sources.primaryText },
+    { field: 'Headline', value: ad.creative.headline, source: sources.headline },
+    { field: 'Description', value: ad.creative.description, source: sources.description },
+    { field: 'CTA', value: ad.creative.cta, source: sources.cta },
+    { field: 'Destination URL', value: ad.creative.destinationUrl, source: sources.destinationUrl },
+    { field: 'Image URL', value: ad.creative.imageUrl ? 'Returned' : 'Not returned by Meta', source: sources.imageUrl }
+  ];
+  return (
+    <section style={{ ...cardStyle, marginTop: 16, border: '1px solid #f59e0b', background: '#fffbeb' }}>
+      <h2 style={{ marginTop: 0 }}>Field Source Debug</h2>
+      <p style={{ color: '#92400e', fontWeight: 800, lineHeight: 1.6 }}>This shows every Meta location DynLander checked for the selected ad fields. If the source says “Not found,” Meta did not return that field in the places currently checked.</p>
+      <table style={tableStyle}>
+        <thead><tr><th style={thTdStyle}>Field</th><th style={thTdStyle}>Value found</th><th style={thTdStyle}>Source</th></tr></thead>
+        <tbody>{rows.map((row) => <tr key={row.field}><td style={thTdStyle}>{row.field}</td><td style={thTdStyle}>{row.value || 'Not returned by Meta'}</td><td style={thTdStyle}>{sourceLabel(row.source)}</td></tr>)}</tbody>
+      </table>
+    </section>
+  );
 }
 
 export default function AdReviewerPanel() {
@@ -120,6 +144,7 @@ export default function AdReviewerPanel() {
             <tr><td style={thTdStyle}>Custom audiences</td><td style={thTdStyle}>{selected.adSet.targeting.customAudienceCount ? selected.adSet.targeting.customAudiences.join(', ') : 'None returned'}</td></tr>
             <tr><td style={thTdStyle}>Excluded custom audiences</td><td style={thTdStyle}>{selected.adSet.targeting.excludedCustomAudienceCount ? selected.adSet.targeting.excludedCustomAudiences.join(', ') : 'None returned'}</td></tr>
           </tbody></table>
+          <FieldSourceDebug ad={selected} />
         </div>
         <div style={{ ...cardStyle, border: '1px solid #bfdbfe', background: '#eff6ff' }}>
           <h2 style={{ marginTop: 0 }}>Recommended improvements</h2>
