@@ -7,8 +7,9 @@ import { useActivePlatform } from '../_components/useActivePlatform';
 import { useMetaDataMode } from '../_components/useMetaDataMode';
 
 type Targeting = { ageMin: string; ageMax: string; genders: string; countries: string; regions: string; cities: string; customAudienceCount: number; customAudiences: string[]; excludedCustomAudienceCount: number; excludedCustomAudiences: string[]; publisherPlatforms: string; rawReturned: boolean };
-type SetupAd = { id: string; name: string; status: string; effectiveStatus: string; campaign: { id: string; name: string; objective: string; status: string }; adSet: { id: string; name: string; status: string; dailyBudget: string; lifetimeBudget: string; optimizationGoal: string; billingEvent: string; bidStrategy: string; targeting: Targeting }; creative: { primaryText: string; headline: string; description: string; cta: string; destinationUrl: string; imageUrl: string; format: string } };
-type ApiData = { ok: boolean; source: string; ads: SetupAd[]; error?: string };
+type Creative = { primaryText: string; headline: string; description: string; cta: string; destinationUrl: string; imageUrl: string; format: string; objectStoryId?: string; urlTags?: string; readSource?: string };
+type SetupAd = { id: string; name: string; status: string; effectiveStatus: string; campaign: { id: string; name: string; objective: string; status: string }; adSet: { id: string; name: string; status: string; dailyBudget: string; lifetimeBudget: string; optimizationGoal: string; billingEvent: string; bidStrategy: string; targeting: Targeting }; creative: Creative };
+type ApiData = { ok: boolean; source: string; creativeMode?: string; creativeWarning?: string | null; ads: SetupAd[]; error?: string };
 
 type Rec = { area: string; current: string; recommendation: string; reason: string };
 
@@ -17,11 +18,12 @@ function missing(value?: string) { return !value || value === '—' || value ===
 function buildSetupRecommendations(ad: SetupAd): Rec[] {
   const recs: Rec[] = [];
   if (ad.effectiveStatus !== 'ACTIVE') recs.push({ area: 'Delivery', current: ad.effectiveStatus || ad.status, recommendation: 'Confirm whether this ad should remain inactive or be replaced with a new active test.', reason: 'Inactive ads cannot create new learning.' });
-  if (missing(ad.creative.primaryText)) recs.push({ area: 'Primary text', current: ad.creative.primaryText, recommendation: 'Add or test clearer primary text that states the offer and who it is for.', reason: 'The first text is usually the main hook.' });
-  if (missing(ad.creative.headline)) recs.push({ area: 'Headline', current: ad.creative.headline, recommendation: 'Test a clear benefit-driven headline.', reason: 'The headline should quickly explain why someone should click.' });
+  if (missing(ad.creative.primaryText)) recs.push({ area: 'Primary text', current: ad.creative.primaryText, recommendation: 'Check dynamic creative assets or the page post text inside Meta. Test clearer primary text that states the offer and who it is for.', reason: 'The first text is usually the main hook.' });
+  if (missing(ad.creative.headline)) recs.push({ area: 'Headline', current: ad.creative.headline, recommendation: 'Check dynamic creative assets or post headline. Test a clear benefit-driven headline.', reason: 'The headline should quickly explain why someone should click.' });
   if (missing(ad.creative.cta)) recs.push({ area: 'CTA', current: ad.creative.cta, recommendation: 'Use a CTA that matches the landing page action.', reason: 'CTA mismatch can lower conversion rate.' });
   if (missing(ad.creative.destinationUrl)) recs.push({ area: 'Destination URL', current: ad.creative.destinationUrl, recommendation: 'Confirm the ad sends people to the correct landing page.', reason: 'Landing page mismatch can waste clicks.' });
   if (!ad.creative.imageUrl) recs.push({ area: 'Image / creative', current: 'Image not returned by Meta', recommendation: 'Review the image manually and test a second visual variation.', reason: 'The image is often the first thing people notice.' });
+  if (ad.creative.readSource === 'limited') recs.push({ area: 'Creative read', current: 'Limited fields returned', recommendation: 'Use Meta Ads Manager to confirm whether this is dynamic creative, a boosted post, or a format with restricted text fields.', reason: 'Meta did not expose enough creative text fields through the current API read.' });
   if (ad.adSet.targeting.customAudienceCount === 0) recs.push({ area: 'Audience', current: 'No custom audiences returned', recommendation: 'Consider whether a warm custom audience or retargeting audience should be tested.', reason: 'Warm audiences can perform differently than cold targeting.' });
   if (!ad.adSet.targeting.rawReturned) recs.push({ area: 'Targeting', current: 'Targeting details not returned', recommendation: 'Check Meta targeting manually before making scaling decisions.', reason: 'The API did not return enough targeting detail to judge audience quality.' });
   if (ad.adSet.dailyBudget === '—' && ad.adSet.lifetimeBudget === '—') recs.push({ area: 'Budget', current: 'Budget not returned', recommendation: 'Review ad set budget manually.', reason: 'Budget controls how fast the ad can learn.' });
@@ -62,7 +64,7 @@ export default function AdReviewerPanel() {
     <>
       <section style={{ ...cardStyle, border: liveReady ? '2px solid #0f766e' : '2px solid #f97316', background: liveReady ? '#f0fdfa' : '#fff7ed' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
-          <div><h2 style={{ marginTop: 0 }}>Ad Reviewer</h2><p style={{ color: liveReady ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{liveReady ? `Loaded live ad setup details for ${selectedAccount.name}.` : data?.error || `No live ad setup details loaded for ${selectedAccount.name}.`}</p></div>
+          <div><h2 style={{ marginTop: 0 }}>Ad Reviewer</h2><p style={{ color: liveReady ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{liveReady ? `Loaded live ad setup details for ${selectedAccount.name}. Creative read: ${data?.creativeMode || 'standard'}.` : data?.error || `No live ad setup details loaded for ${selectedAccount.name}.`}</p>{data?.creativeWarning ? <p style={{ color: '#9a3412', fontWeight: 800, marginBottom: 0 }}>Creative warning: {data.creativeWarning}</p> : null}</div>
           <button type="button" onClick={loadAds} style={blueButtonStyle}>{loading ? 'Refreshing...' : 'Refresh ads'}</button>
         </div>
       </section>
@@ -75,19 +77,28 @@ export default function AdReviewerPanel() {
             <tr><td style={thTdStyle}>Ad</td><td style={thTdStyle}>{selected.name}</td></tr>
             <tr><td style={thTdStyle}>Status</td><td style={thTdStyle}>{selected.effectiveStatus || selected.status}</td></tr>
             <tr><td style={thTdStyle}>Campaign</td><td style={thTdStyle}>{selected.campaign.name}</td></tr>
+            <tr><td style={thTdStyle}>Campaign objective</td><td style={thTdStyle}>{selected.campaign.objective}</td></tr>
             <tr><td style={thTdStyle}>Ad set</td><td style={thTdStyle}>{selected.adSet.name}</td></tr>
             <tr><td style={thTdStyle}>Primary text</td><td style={thTdStyle}>{selected.creative.primaryText}</td></tr>
             <tr><td style={thTdStyle}>Headline</td><td style={thTdStyle}>{selected.creative.headline}</td></tr>
             <tr><td style={thTdStyle}>Description</td><td style={thTdStyle}>{selected.creative.description}</td></tr>
             <tr><td style={thTdStyle}>CTA</td><td style={thTdStyle}>{selected.creative.cta}</td></tr>
             <tr><td style={thTdStyle}>Destination URL</td><td style={thTdStyle}>{selected.creative.destinationUrl}</td></tr>
+            <tr><td style={thTdStyle}>URL tags</td><td style={thTdStyle}>{selected.creative.urlTags || 'Not returned by Meta'}</td></tr>
             <tr><td style={thTdStyle}>Format</td><td style={thTdStyle}>{selected.creative.format}</td></tr>
+            <tr><td style={thTdStyle}>Creative read source</td><td style={thTdStyle}>{selected.creative.readSource || 'standard'}</td></tr>
+            <tr><td style={thTdStyle}>Object story ID</td><td style={thTdStyle}>{selected.creative.objectStoryId || 'Not returned by Meta'}</td></tr>
             <tr><td style={thTdStyle}>Daily budget</td><td style={thTdStyle}>{selected.adSet.dailyBudget}</td></tr>
+            <tr><td style={thTdStyle}>Lifetime budget</td><td style={thTdStyle}>{selected.adSet.lifetimeBudget}</td></tr>
             <tr><td style={thTdStyle}>Optimization goal</td><td style={thTdStyle}>{selected.adSet.optimizationGoal}</td></tr>
+            <tr><td style={thTdStyle}>Billing event</td><td style={thTdStyle}>{selected.adSet.billingEvent}</td></tr>
             <tr><td style={thTdStyle}>Bid strategy</td><td style={thTdStyle}>{selected.adSet.bidStrategy}</td></tr>
             <tr><td style={thTdStyle}>Target ages</td><td style={thTdStyle}>{selected.adSet.targeting.ageMin} - {selected.adSet.targeting.ageMax}</td></tr>
+            <tr><td style={thTdStyle}>Genders</td><td style={thTdStyle}>{selected.adSet.targeting.genders}</td></tr>
             <tr><td style={thTdStyle}>Locations</td><td style={thTdStyle}>{selected.adSet.targeting.countries || selected.adSet.targeting.regions || selected.adSet.targeting.cities || 'Not returned by Meta'}</td></tr>
+            <tr><td style={thTdStyle}>Placements</td><td style={thTdStyle}>{selected.adSet.targeting.publisherPlatforms}</td></tr>
             <tr><td style={thTdStyle}>Custom audiences</td><td style={thTdStyle}>{selected.adSet.targeting.customAudienceCount ? selected.adSet.targeting.customAudiences.join(', ') : 'None returned'}</td></tr>
+            <tr><td style={thTdStyle}>Excluded custom audiences</td><td style={thTdStyle}>{selected.adSet.targeting.excludedCustomAudienceCount ? selected.adSet.targeting.excludedCustomAudiences.join(', ') : 'None returned'}</td></tr>
           </tbody></table>
         </div>
         <div style={{ ...cardStyle, border: '1px solid #bfdbfe', background: '#eff6ff' }}>
