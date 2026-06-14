@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
+import { useMetaDataMode } from '../_components/useMetaDataMode';
 import { metaCreatives } from '../_data/metaMockData';
 
 type LiveCreative = {
@@ -58,11 +59,20 @@ function normalizeMockRows(): LiveCreative[] {
 }
 
 export default function MetaCreativeLiveReview() {
+  const { mode } = useMetaDataMode();
+  const isDemoMode = mode === 'demo';
   const [data, setData] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('Loading Meta ad review data...');
 
   async function loadReview() {
+    if (isDemoMode) {
+      setData(null);
+      setLoading(false);
+      setMessage('Showing demo/mock creative review. Switch Meta Data Mode to Connected Live Meta Account to read Meta ads.');
+      return;
+    }
+
     setLoading(true);
     setMessage('Loading Meta ad review data...');
     try {
@@ -80,9 +90,9 @@ export default function MetaCreativeLiveReview() {
 
   useEffect(() => {
     loadReview();
-  }, []);
+  }, [isDemoMode]);
 
-  const isLive = Boolean(data?.ok && data.creatives?.length);
+  const isLive = Boolean(!isDemoMode && data?.ok && data.creatives?.length);
   const rows = isLive ? data?.creatives || [] : normalizeMockRows();
   const watchCount = rows.filter((row) => row.fatigue !== 'Good').length;
   const goodCount = rows.filter((row) => row.fatigue === 'Good').length;
@@ -95,12 +105,12 @@ export default function MetaCreativeLiveReview() {
             <h2 style={{ marginTop: 0 }}>Meta creative review</h2>
             <p style={{ color: isLive ? '#166534' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{message}</p>
           </div>
-          <button type="button" style={blueButtonStyle} onClick={loadReview}>{loading ? 'Checking...' : 'Refresh review'}</button>
+          <button type="button" style={blueButtonStyle} onClick={loadReview}>{isDemoMode ? 'Demo mode active' : loading ? 'Checking...' : 'Refresh review'}</button>
         </div>
       </section>
 
       <div style={gridStyle}>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 28 }}>{isLive ? 'Live read only' : 'Mock fallback'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{data?.source || 'mock_fallback'}</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 28 }}>{isLive ? 'Live read only' : isDemoMode ? 'Demo / Mock' : 'Mock fallback'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{isDemoMode ? 'demo_mode' : data?.source || 'mock_fallback'}</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Ads reviewed</div><strong style={{ fontSize: 28 }}>{rows.length}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Readable ads.</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Needs review</div><strong style={{ fontSize: 28 }}>{watchCount}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Fatigue or low CTR watch list.</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Good</div><strong style={{ fontSize: 28 }}>{goodCount}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Currently okay.</p></div>
