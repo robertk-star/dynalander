@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { cardStyle, inputStyle, labelStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
-import MetaAdReviewDashboard from './MetaAdReviewDashboard';
+import MetaLiveAdRows from '../creative-review/MetaLiveAdRows';
 import { adReviewGroups, getAdReviewSetup, mockChangeHistory, reviewDescription, reviewHeadline } from './adReviewData';
 
 export default function AdReviewDashboard() {
@@ -22,7 +22,7 @@ export default function AdReviewDashboard() {
   }
 
   if (platform === 'meta_ads') {
-    return <MetaAdReviewDashboard />;
+    return <MetaLiveAdRows />;
   }
 
   return (
