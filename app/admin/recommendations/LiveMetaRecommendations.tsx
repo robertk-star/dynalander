@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
+import { useActiveAccount } from '../_components/useActiveAccount';
 import { useMetaDataMode } from '../_components/useMetaDataMode';
 import { metaRecommendations } from '../_data/metaMockData';
 
@@ -55,18 +56,19 @@ function buildLiveRecommendations(data: LivePreview | null): RecommendationRow[]
   const insight = (data.insights[0] || {}) as any;
   const frequency = Number(insight.frequency || 0);
 
-  if (ctr < 1 && spend > 0) rows.push({ priority: 'High', area: 'Click quality', recommendation: 'Review Meta ad creative and offer match.', reason: `Live CTR is ${data.summary.ctr}, which may show weak ad-to-audience fit.` });
-  if (frequency >= 2) rows.push({ priority: 'High', area: 'Creative fatigue', recommendation: 'Refresh creative before adding more budget.', reason: `Live frequency is ${frequency.toFixed(2)}, which can indicate fatigue.` });
-  if (cpc > 5) rows.push({ priority: 'Medium', area: 'Traffic cost', recommendation: 'Review targeting, placement mix, and message clarity.', reason: `Live CPC is ${data.summary.cpc}.` });
-  if (activeCampaigns === 0) rows.push({ priority: 'High', area: 'Delivery', recommendation: 'Check campaign delivery before judging performance.', reason: 'No active campaigns were returned in the live preview.' });
-  if (pausedAds > 0) rows.push({ priority: 'Medium', area: 'Ad status', recommendation: 'Review paused ads and confirm whether they should stay paused.', reason: `${pausedAds} paused ad(s) were returned by Meta.` });
+  if (ctr < 1 && spend > 0) rows.push({ priority: 'High', area: 'Click quality', recommendation: 'Review Meta ad creative and offer match.', reason: `Active-account CTR is ${data.summary.ctr}, which may show weak ad-to-audience fit.` });
+  if (frequency >= 2) rows.push({ priority: 'High', area: 'Creative fatigue', recommendation: 'Refresh creative before adding more budget.', reason: `Active-account frequency is ${frequency.toFixed(2)}, which can indicate fatigue.` });
+  if (cpc > 5) rows.push({ priority: 'Medium', area: 'Traffic cost', recommendation: 'Review targeting, placement mix, and message clarity.', reason: `Active-account CPC is ${data.summary.cpc}.` });
+  if (activeCampaigns === 0) rows.push({ priority: 'High', area: 'Delivery', recommendation: 'Check campaign delivery before judging performance.', reason: 'No active campaigns were returned for the active account.' });
+  if (pausedAds > 0) rows.push({ priority: 'Medium', area: 'Ad status', recommendation: 'Review paused ads and confirm whether they should stay paused.', reason: `${pausedAds} paused ad(s) were returned for the active account.` });
 
-  rows.push({ priority: 'Medium', area: 'Read-only review', recommendation: 'Compare live Meta performance against saved recommendation actions.', reason: 'DynLander can now read live Meta campaign, ad set, ad, and insight data.' });
+  rows.push({ priority: 'Medium', area: 'Read-only review', recommendation: 'Compare active-account performance against saved recommendation actions.', reason: 'DynLander is reading live Meta campaign, ad set, ad, and insight data for the active account.' });
 
   return rows;
 }
 
 export default function LiveMetaRecommendations() {
+  const { selectedAccount } = useActiveAccount();
   const { mode } = useMetaDataMode();
   const isDemoMode = mode === 'demo';
   const [data, setData] = useState<LivePreview | null>(null);
@@ -77,20 +79,20 @@ export default function LiveMetaRecommendations() {
     if (isDemoMode) {
       setData(null);
       setLoading(false);
-      setMessage('Showing demo/mock Meta recommendations. Switch Meta Data Mode to Connected Live Meta Account to use live data.');
+      setMessage('Demo/mock mode is selected. Switch Meta Data Mode to Connected Live Meta Account to use active-account live data.');
       return;
     }
 
     setLoading(true);
-    setMessage('Loading live Meta recommendations...');
+    setMessage(`Loading live Meta recommendations for ${selectedAccount.name}...`);
     try {
-      const response = await fetch('/api/meta-ads/read-only-preview', { cache: 'no-store' });
+      const response = await fetch(`/api/meta-ads/read-only-preview?accountKey=${encodeURIComponent(selectedAccount.customerId)}`, { cache: 'no-store' });
       const result = await response.json();
       setData(result);
-      setMessage(result.ok ? 'Showing live Meta recommendations from read-only data.' : 'Showing mock fallback because live Meta data is not readable yet.');
+      setMessage(result.ok ? `Showing live Meta recommendations for ${selectedAccount.name}.` : `Live Meta data is not readable for ${selectedAccount.name}.`);
     } catch {
       setData(null);
-      setMessage('Showing mock fallback because the live Meta request failed.');
+      setMessage(`Live Meta request failed for ${selectedAccount.name}.`);
     } finally {
       setLoading(false);
     }
@@ -98,7 +100,7 @@ export default function LiveMetaRecommendations() {
 
   useEffect(() => {
     loadData();
-  }, [isDemoMode]);
+  }, [isDemoMode, selectedAccount.customerId]);
 
   const recommendations = useMemo(() => buildLiveRecommendations(data), [data]);
   const isLive = Boolean(!isDemoMode && data?.ok && data.summary);
@@ -108,15 +110,16 @@ export default function LiveMetaRecommendations() {
       <section style={{ ...cardStyle, border: isLive ? '1px solid #16a34a' : '1px solid #f97316', background: isLive ? '#f0fdf4' : '#fff7ed' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
           <div>
-            <h2 style={{ marginTop: 0 }}>{isLive ? 'Live Meta recommendations' : 'Meta recommendations'}</h2>
+            <h2 style={{ marginTop: 0 }}>{isLive ? 'Active-account Meta recommendations' : 'Meta recommendations'}</h2>
             <p style={{ color: isLive ? '#166534' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{message}</p>
           </div>
-          <button type="button" style={blueButtonStyle} onClick={loadData}>{isDemoMode ? 'Demo mode active' : loading ? 'Checking...' : 'Refresh recommendations'}</button>
+          <button type="button" style={blueButtonStyle} onClick={loadData}>{isDemoMode ? 'Demo mode active' : loading ? 'Checking...' : 'Refresh active account recommendations'}</button>
         </div>
       </section>
 
       <div style={gridStyle}>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 32 }}>{isLive ? 'Live read only' : isDemoMode ? 'Demo / Mock' : 'Mock fallback'}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Active account</div><strong style={{ fontSize: 32 }}>{selectedAccount.name}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{selectedAccount.customerId}</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 32 }}>{isLive ? 'Live read only' : isDemoMode ? 'Demo / Mock' : 'Not live for active account'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Spend</div><strong style={{ fontSize: 32 }}>{data?.summary?.spend || '—'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>CTR</div><strong style={{ fontSize: 32 }}>{data?.summary?.ctr || '—'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Recommendations</div><strong style={{ fontSize: 32 }}>{recommendations.length}</strong></div>
@@ -134,7 +137,7 @@ export default function LiveMetaRecommendations() {
         <h2 style={{ marginTop: 0 }}>Keep / watch / refresh logic</h2>
         <table style={tableStyle}>
           <tbody>
-            <tr><td style={thTdStyle}><strong>Keep</strong></td><td style={thTdStyle}>Keep creatives or settings that maintain acceptable CTR, CPC, and delivery.</td></tr>
+            <tr><td style={thTdStyle}><strong>Keep</strong></td><td style={thTdStyle}>Keep creatives or settings that maintain acceptable CTR, CPC, and delivery for the active account.</td></tr>
             <tr><td style={thTdStyle}><strong>Watch</strong></td><td style={thTdStyle}>Watch low-data rows, rising CPC, or borderline CTR before taking action.</td></tr>
             <tr><td style={thTdStyle}><strong>Refresh</strong></td><td style={thTdStyle}>Refresh ads with low CTR, high frequency, or weak offer match.</td></tr>
           </tbody>
