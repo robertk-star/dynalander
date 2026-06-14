@@ -42,6 +42,7 @@ function GoogleRecommendations() {
         <h2 style={{ marginTop: 0 }}>Keep / watch / rollback logic</h2>
         <table style={tableStyle}><tbody>{googleActionRows.map((row) => <tr key={row.action}><td style={thTdStyle}><strong>{row.action}</strong></td><td style={thTdStyle}>{row.rule}</td></tr>)}</tbody></table>
       </section>
+      <PersistentRecommendationResultTracking />
     </>
   );
 }
@@ -52,7 +53,6 @@ export default function RecommendationsPage() {
   return (
     <AdminShell title="Recommendations" subtitle="Platform-aware recommendation hub for Google Ads and Facebook / Meta Ads.">
       {platform === 'meta_ads' ? <LiveMetaRecommendations /> : <GoogleRecommendations />}
-      <PersistentRecommendationResultTracking />
     </AdminShell>
   );
 }
