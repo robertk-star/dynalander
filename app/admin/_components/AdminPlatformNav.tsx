@@ -40,6 +40,7 @@ export default function AdminPlatformNav() {
       <nav style={navStyle}>
         <a style={navLinkStyle} href="/admin">Dashboard</a>
         {isMeta ? <a style={navLinkStyle} href="/admin/dashboard-summary">Dashboard Summary</a> : null}
+        {isMeta ? <a style={navLinkStyle} href="/admin/ad-reviewer">Ad Reviewer</a> : null}
         {isMeta ? <a style={navLinkStyle} href="/admin/meta-ads">Meta Ads Intelligence</a> : <a style={navLinkStyle} href="/admin/google-ads">Google Ads Intelligence</a>}
         {isMeta ? <a style={navLinkStyle} href="/admin/creative-review">Creative Review</a> : <a style={navLinkStyle} href="/admin/live-query-preview">Live Query Preview</a>}
         {isMeta ? <a style={navLinkStyle} href="/admin/meta-ads-connection">Meta Ads Connection</a> : null}
