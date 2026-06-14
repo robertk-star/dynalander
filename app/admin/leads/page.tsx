@@ -5,7 +5,7 @@ import { cardStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
 import { getAccountLeads } from '../_data/accountScopedData';
-import MetaLeadsDashboard from './MetaLeadsDashboard';
+import MetaActiveAccountStatus from './MetaActiveAccountStatus';
 
 export default function DynLanderLeadsPage() {
   const { platform } = useActivePlatform();
@@ -14,7 +14,7 @@ export default function DynLanderLeadsPage() {
 
   return (
     <AdminShell title="Lead Dashboard" subtitle="Review lead records for the selected platform and active account.">
-      {platform === 'meta_ads' ? <MetaLeadsDashboard /> : (
+      {platform === 'meta_ads' ? <MetaActiveAccountStatus /> : (
         <section style={cardStyle}>
           <h2 style={{ marginTop: 0 }}>Google / landing page seller inquiries</h2>
           <p style={{ color: '#64748b' }}>Showing account-scoped mock records for {selectedAccount.name}.</p>
