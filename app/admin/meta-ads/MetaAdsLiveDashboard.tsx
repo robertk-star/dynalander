@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
+import { useMetaDataMode } from '../_components/useMetaDataMode';
 import { metaAdSets, metaCampaigns, metaRecommendations, metaSummary } from '../_data/metaMockData';
 
 type PreviewData = {
@@ -26,11 +27,20 @@ type PreviewData = {
 };
 
 export default function MetaAdsLiveDashboard() {
+  const { mode } = useMetaDataMode();
+  const isDemoMode = mode === 'demo';
   const [data, setData] = useState<PreviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('Loading Meta read-only data...');
 
   async function loadPreview() {
+    if (isDemoMode) {
+      setData(null);
+      setLoading(false);
+      setMessage('Showing demo/mock Meta data. Switch Meta Data Mode to Connected Live Meta Account to read Meta.');
+      return;
+    }
+
     setLoading(true);
     setMessage('Loading Meta read-only data...');
     try {
@@ -48,14 +58,14 @@ export default function MetaAdsLiveDashboard() {
 
   useEffect(() => {
     loadPreview();
-  }, []);
+  }, [isDemoMode]);
 
   const summary = data?.summary;
   const liveCampaigns = data?.campaigns || [];
   const liveAdSets = data?.adSets || [];
   const liveAds = data?.ads || [];
   const liveInsights = data?.insights || [];
-  const isLive = Boolean(data?.ok && summary);
+  const isLive = Boolean(!isDemoMode && data?.ok && summary);
 
   return (
     <>
@@ -65,12 +75,12 @@ export default function MetaAdsLiveDashboard() {
             <h2 style={{ marginTop: 0 }}>Meta Ads Intelligence</h2>
             <p style={{ color: isLive ? '#166534' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{message}</p>
           </div>
-          <button type="button" style={blueButtonStyle} onClick={loadPreview}>{loading ? 'Checking...' : 'Refresh live data'}</button>
+          <button type="button" style={blueButtonStyle} onClick={loadPreview}>{isDemoMode ? 'Demo mode active' : loading ? 'Checking...' : 'Refresh live data'}</button>
         </div>
       </section>
 
       <div style={gridStyle}>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 28 }}>{isLive ? 'Live read only' : 'Mock fallback'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{data?.source || 'mock_fallback'}</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 28 }}>{isLive ? 'Live read only' : isDemoMode ? 'Demo / Mock' : 'Mock fallback'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{isDemoMode ? 'demo_mode' : data?.source || 'mock_fallback'}</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Spend</div><strong style={{ fontSize: 28 }}>{summary?.spend || metaSummary.spend}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Last 7 days when live.</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Impressions</div><strong style={{ fontSize: 28 }}>{summary?.impressions || metaSummary.impressions}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Meta impressions.</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Clicks</div><strong style={{ fontSize: 28 }}>{summary?.clicks || '—'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Meta clicks.</p></div>
