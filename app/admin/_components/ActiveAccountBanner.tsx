@@ -1,29 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { googleAdsAccounts } from '../_data/dynlanderAdminData';
-import { activeAccountStorageKey, getAccountById } from './AdminAccountSelector';
+import { useActivePlatform } from './useActivePlatform';
+import { useActiveAccount } from './useActiveAccount';
 
 export default function ActiveAccountBanner() {
-  const [accountId, setAccountId] = useState(googleAdsAccounts[0].id);
-  const selectedAccount = getAccountById(accountId);
-
-  useEffect(() => {
-    const savedAccount = window.localStorage.getItem(activeAccountStorageKey);
-    if (savedAccount && googleAdsAccounts.some((account) => account.id === savedAccount)) {
-      setAccountId(savedAccount);
-    }
-
-    function handleAccountChange(event: Event) {
-      const customEvent = event as CustomEvent<string>;
-      if (customEvent.detail) {
-        setAccountId(customEvent.detail);
-      }
-    }
-
-    window.addEventListener('dynlander-active-account-change', handleAccountChange);
-    return () => window.removeEventListener('dynlander-active-account-change', handleAccountChange);
-  }, []);
+  const { platform } = useActivePlatform();
+  const { selectedAccount } = useActiveAccount();
+  const isMeta = platform === 'meta_ads';
 
   return (
     <div style={{
@@ -42,7 +25,7 @@ export default function ActiveAccountBanner() {
       <div>
         <strong>Working in: {selectedAccount.name}</strong>
         <div style={{ color: '#475569', fontSize: 13, marginTop: 3 }}>
-          Market: {selectedAccount.market} | Google Ads ID: {selectedAccount.customerId}
+          {isMeta ? `Meta Ads Account: ${selectedAccount.customerId}` : `Market: ${selectedAccount.market} | Google Ads ID: ${selectedAccount.customerId}`}
         </div>
       </div>
       <div style={{ color: '#1d4ed8', fontWeight: 800, fontSize: 13 }}>
