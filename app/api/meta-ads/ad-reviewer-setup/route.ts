@@ -32,7 +32,7 @@ function getCreativeText(creative: any) {
   return {
     primaryText: link.message || video.message || creative?.body || 'Not returned by Meta',
     headline: link.name || video.title || creative?.title || 'Not returned by Meta',
-    description: link.description || creative?.description || 'Not returned by Meta',
+    description: link.description || 'Not returned by Meta',
     cta: cta.type || 'Not returned by Meta',
     destinationUrl: link.link || cta.value?.link || 'Not returned by Meta',
     imageUrl: link.picture || creative?.image_url || creative?.thumbnail_url || '',
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
   if (!env.configured || !configured) return Response.json({ ok: false, source: 'not_configured', ads: [], error: 'Meta ENV is not configured.' });
   if (requested && requested !== configured && requested !== 'act_meta-connected-account') return Response.json({ ok: false, source: 'active_account_mismatch', ads: [], requestedAdAccountId: requested, configuredAdAccountId: configured, error: 'Selected active account does not match connected Meta account.' });
 
-  const adsResult = await metaGet(`${configured}/ads`, { fields: 'id,name,status,effective_status,campaign_id,adset_id,creative{id,name,title,body,description,image_url,thumbnail_url,object_story_spec}', limit: '100' });
+  const adsResult = await metaGet(`${configured}/ads`, { fields: 'id,name,status,effective_status,campaign_id,adset_id,creative{id,name,title,body,image_url,thumbnail_url,object_story_spec}', limit: '100' });
   if (!adsResult.response.ok) return Response.json({ ok: false, source: 'ad_setup_failed', ads: [], error: adsResult.json?.error?.message || 'Could not read ads.' });
 
   const adRows = adsResult.json?.data || [];
