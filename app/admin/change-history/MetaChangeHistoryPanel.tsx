@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
+import { useMetaDataMode } from '../_components/useMetaDataMode';
 
 type MetaChangeRow = {
   id: string;
@@ -25,6 +26,23 @@ type MetaChangeResponse = {
   error?: string;
 };
 
+type LivePreview = {
+  ok: boolean;
+  source: string;
+  summary: null | {
+    spend: string;
+    impressions: string;
+    clicks: string;
+    ctr: string;
+    cpc: string;
+    cpm: string;
+    campaignCount: number;
+    adSetCount: number;
+    adCount: number;
+  };
+  error?: string;
+};
+
 function getReviewStatus(row: MetaChangeRow) {
   if (!row.review_after_date) return 'Watching';
   const reviewDate = new Date(row.review_after_date).getTime();
@@ -33,22 +51,34 @@ function getReviewStatus(row: MetaChangeRow) {
 
 export default function MetaChangeHistoryPanel() {
   const { accountId, selectedAccount } = useActiveAccount();
+  const { mode } = useMetaDataMode();
+  const isDemoMode = mode === 'demo';
   const [data, setData] = useState<MetaChangeResponse | null>(null);
+  const [livePreview, setLivePreview] = useState<LivePreview | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function loadChanges() {
     setLoading(true);
     try {
-      const response = await fetch(`/api/meta-ads/changes?accountKey=${encodeURIComponent(accountId)}`, { cache: 'no-store' });
-      setData(await response.json());
+      const [changesResponse, liveResponse] = await Promise.all([
+        fetch(`/api/meta-ads/changes?accountKey=${encodeURIComponent(accountId)}`, { cache: 'no-store' }),
+        isDemoMode ? Promise.resolve(null) : fetch('/api/meta-ads/read-only-preview', { cache: 'no-store' })
+      ]);
+      setData(await changesResponse.json());
+      if (liveResponse) {
+        setLivePreview(await liveResponse.json());
+      } else {
+        setLivePreview(null);
+      }
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { loadChanges(); }, [accountId]);
+  useEffect(() => { loadChanges(); }, [accountId, isDemoMode]);
 
   const changes = data?.changes ?? [];
+  const liveReady = Boolean(!isDemoMode && livePreview?.ok && livePreview.summary);
   const readyCount = changes.filter((row) => getReviewStatus(row) === 'Ready for review').length;
   const watchingCount = changes.length - readyCount;
   const primaryTextCount = changes.filter((row) => row.asset_type === 'primary_text').length;
@@ -57,29 +87,42 @@ export default function MetaChangeHistoryPanel() {
   const fatigueCount = changes.filter((row) => row.asset_type === 'fatigue_status' || row.asset_type === 'frequency').length;
 
   const cards = [
-    { label: 'Platform', value: 'Facebook / Meta Ads', note: 'Showing Meta mock change history.' },
+    { label: 'Data mode', value: liveReady ? 'Live read-only' : isDemoMode ? 'Demo / mock' : 'Live fallback', note: liveReady ? 'Live Meta data can be previewed.' : 'Internal/mock change history is shown.' },
     { label: 'Active account', value: selectedAccount.name, note: 'Change history is scoped to the selected account.' },
-    { label: 'Detected changes', value: String(changes.length), note: data?.ok ? 'Rows loaded from meta_change_log.' : data?.error || 'No data loaded yet.' },
+    { label: 'Live preview', value: liveReady ? 'Available' : isDemoMode ? 'Demo mode' : 'Not readable', note: liveReady ? `${livePreview?.summary?.campaignCount ?? 0} campaigns · ${livePreview?.summary?.adCount ?? 0} ads` : livePreview?.error || 'Live Meta preview is not being used here.' },
+    { label: 'Internal detected changes', value: String(changes.length), note: data?.ok ? 'Rows loaded from meta_change_log.' : data?.error || 'No data loaded yet.' },
     { label: 'Watching', value: String(watchingCount), note: 'Waiting for enough time or data before review.' },
     { label: 'Ready for review', value: String(readyCount), note: 'Review date has passed.' },
-    { label: 'Primary text / headline', value: `${primaryTextCount} / ${headlineCount}`, note: 'Meta creative copy changes detected.' },
-    { label: 'URL changes', value: String(urlCount), note: 'Destination URL changes detected.' },
-    { label: 'Fatigue signals', value: String(fatigueCount), note: 'Frequency or fatigue status changes detected.' }
+    { label: 'Primary text / headline', value: `${primaryTextCount} / ${headlineCount}`, note: 'Internal Meta creative copy changes detected.' },
+    { label: 'URL changes', value: String(urlCount), note: 'Internal destination URL changes detected.' },
+    { label: 'Fatigue signals', value: String(fatigueCount), note: 'Internal frequency or fatigue status changes detected.' }
   ];
 
   return (
     <>
-      <section style={{ ...cardStyle, border: '2px solid #f97316', background: '#fff7ed' }}>
+      <section style={{ ...cardStyle, border: liveReady ? '2px solid #0f766e' : '2px solid #f97316', background: liveReady ? '#f0fdfa' : '#fff7ed' }}>
         <h2 style={{ marginTop: 0 }}>Meta change history</h2>
-        <p style={{ color: '#9a3412', fontWeight: 800, lineHeight: 1.6 }}>
-          This page shows detected changes from saved Meta mock snapshots. It does not pull live Meta data or change Facebook / Meta ads.
+        <p style={{ color: liveReady ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6 }}>
+          {liveReady ? 'Live Meta read-only preview is available, but this change history table still shows internal DynLander change rows only.' : 'This page is showing internal/mock Meta change history. It does not change Facebook / Meta ads.'}
+        </p>
+        <p style={{ color: '#475569', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>
+          Live Meta preview status is separate from internal detected changes.
         </p>
       </section>
 
       <div style={gridStyle}>{cards.map((card) => <div key={card.label} style={cardStyle}><div style={{ color: '#64748b' }}>{card.label}</div><strong style={{ fontSize: 24 }}>{loading ? 'Loading...' : card.value}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{card.note}</p></div>)}</div>
 
+      {liveReady ? <section style={cardStyle}>
+        <h2 style={{ marginTop: 0 }}>Live Meta preview status</h2>
+        <table style={tableStyle}>
+          <thead><tr><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Impressions</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPC</th><th style={thTdStyle}>CPM</th></tr></thead>
+          <tbody><tr><td style={thTdStyle}>{livePreview?.summary?.spend || '—'}</td><td style={thTdStyle}>{livePreview?.summary?.impressions || '—'}</td><td style={thTdStyle}>{livePreview?.summary?.clicks || '—'}</td><td style={thTdStyle}>{livePreview?.summary?.ctr || '—'}</td><td style={thTdStyle}>{livePreview?.summary?.cpc || '—'}</td><td style={thTdStyle}>{livePreview?.summary?.cpm || '—'}</td></tr></tbody>
+        </table>
+        <p style={{ color: '#64748b', lineHeight: 1.6, marginBottom: 0 }}>This is read-only preview context. It is not a saved live change history.</p>
+      </section> : null}
+
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Detected Meta changes</h2>
+        <h2 style={{ marginTop: 0 }}>Internal detected Meta changes</h2>
         <table style={tableStyle}>
           <thead>
             <tr>
@@ -108,16 +151,16 @@ export default function MetaChangeHistoryPanel() {
             ))}
           </tbody>
         </table>
-        {!loading && changes.length === 0 ? <p style={{ color: '#64748b' }}>No Meta changes yet. Use Snapshot Preview to save a Meta mock snapshot, save a changed Meta mock snapshot, then detect Meta changes.</p> : null}
+        {!loading && changes.length === 0 ? <p style={{ color: '#64748b' }}>No internal Meta changes yet. Use Snapshot Preview to save an internal snapshot, save a changed internal snapshot, then detect internal changes.</p> : null}
       </section>
 
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>How this will work with live Meta Ads</h2>
+        <h2 style={{ marginTop: 0 }}>What this page does and does not do</h2>
         <p style={{ color: '#475569', lineHeight: 1.6 }}>
-          When live Meta snapshots are connected, DynLander will show creative, copy, CTA, destination URL, frequency, and fatigue changes here.
+          This page can show live Meta read-only preview status when live mode is selected. The detected changes table still comes from DynLander internal snapshot/change tables.
         </p>
         <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>
-          This will help decide whether a Meta ad change should be kept, watched longer, refreshed, or rolled back.
+          It does not edit ads, pause ads, change budgets, publish campaigns, or save live Meta changes back into Meta.
         </p>
       </section>
     </>
