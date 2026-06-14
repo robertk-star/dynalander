@@ -45,6 +45,12 @@ function money(value: string | number | undefined) {
   return `$${numberValue.toFixed(2)}`;
 }
 
+function budgetMoney(value: string | number | undefined) {
+  if (value === undefined || value === null || value === '') return '—';
+  const minorUnits = Number(value || 0);
+  return money(minorUnits / 100);
+}
+
 function percent(value: string | number | undefined) {
   const numberValue = Number(value || 0);
   return `${numberValue.toFixed(2)}%`;
@@ -89,31 +95,11 @@ export async function runMetaReadinessCheck(activeAccountKey?: string | null) {
 
   if (resolved.accountMismatch) {
     checks.push(check('Active account match', false, 'Mismatch', `Selected ${resolved.requested || 'unknown'} but connected ${resolved.configured || 'none'}`));
-    return {
-      ok: false,
-      configured: env.configured,
-      mode: 'active_account_mismatch',
-      adAccountId,
-      requestedAdAccountId: resolved.requested,
-      configuredAdAccountId: resolved.configured,
-      apiVersion: account.apiVersion,
-      checks,
-      checkedAt: new Date().toISOString()
-    };
+    return { ok: false, configured: env.configured, mode: 'active_account_mismatch', adAccountId, requestedAdAccountId: resolved.requested, configuredAdAccountId: resolved.configured, apiVersion: account.apiVersion, checks, checkedAt: new Date().toISOString() };
   }
 
   if (!env.configured || !adAccountId) {
-    return {
-      ok: false,
-      configured: false,
-      mode: 'mock_only',
-      adAccountId,
-      requestedAdAccountId: resolved.requested,
-      configuredAdAccountId: resolved.configured,
-      apiVersion: account.apiVersion,
-      checks,
-      checkedAt: new Date().toISOString()
-    };
+    return { ok: false, configured: false, mode: 'mock_only', adAccountId, requestedAdAccountId: resolved.requested, configuredAdAccountId: resolved.configured, apiVersion: account.apiVersion, checks, checkedAt: new Date().toISOString() };
   }
 
   try {
@@ -136,31 +122,10 @@ export async function runMetaReadinessCheck(activeAccountKey?: string | null) {
 
     const liveOk = checks.filter((item) => item.name.startsWith('Can ') || item.name === 'Active account match').every((item) => item.ok);
 
-    return {
-      ok: liveOk,
-      configured: true,
-      mode: 'read_only_live_check',
-      adAccountId,
-      requestedAdAccountId: resolved.requested,
-      configuredAdAccountId: resolved.configured,
-      apiVersion: account.apiVersion,
-      account: accountResult.json?.error ? null : accountResult.json,
-      checks,
-      checkedAt: new Date().toISOString()
-    };
+    return { ok: liveOk, configured: true, mode: 'read_only_live_check', adAccountId, requestedAdAccountId: resolved.requested, configuredAdAccountId: resolved.configured, apiVersion: account.apiVersion, account: accountResult.json?.error ? null : accountResult.json, checks, checkedAt: new Date().toISOString() };
   } catch (error) {
     checks.push(check('Can reach Meta API', false, 'Request failed', error instanceof Error ? error.message : 'Unknown error'));
-    return {
-      ok: false,
-      configured: true,
-      mode: 'read_only_live_check_failed',
-      adAccountId,
-      requestedAdAccountId: resolved.requested,
-      configuredAdAccountId: resolved.configured,
-      apiVersion: account.apiVersion,
-      checks,
-      checkedAt: new Date().toISOString()
-    };
+    return { ok: false, configured: true, mode: 'read_only_live_check_failed', adAccountId, requestedAdAccountId: resolved.requested, configuredAdAccountId: resolved.configured, apiVersion: account.apiVersion, checks, checkedAt: new Date().toISOString() };
   }
 }
 
@@ -180,6 +145,7 @@ export async function getLiveMetaDataPreview(activeAccountKey?: string | null) {
   ]);
 
   const insightRows = insightsResult.json?.data || [];
+  const adSetRows = (adSetsResult.json?.data || []).map((row: any) => ({ ...row, daily_budget: budgetMoney(row.daily_budget), lifetime_budget: budgetMoney(row.lifetime_budget) }));
   const totalSpend = insightRows.reduce((sum: number, row: any) => sum + Number(row.spend || 0), 0);
   const totalImpressions = insightRows.reduce((sum: number, row: any) => sum + Number(row.impressions || 0), 0);
   const totalClicks = insightRows.reduce((sum: number, row: any) => sum + Number(row.clicks || 0), 0);
@@ -192,19 +158,9 @@ export async function getLiveMetaDataPreview(activeAccountKey?: string | null) {
     source: 'meta_live_read_only_active_account',
     readiness,
     activeAccount: readiness.account,
-    summary: {
-      spend: money(totalSpend),
-      impressions: numberText(totalImpressions),
-      clicks: numberText(totalClicks),
-      ctr: percent(avgCtr),
-      cpc: money(avgCpc),
-      cpm: money(avgCpm),
-      campaignCount: campaignsResult.json?.data?.length || 0,
-      adSetCount: adSetsResult.json?.data?.length || 0,
-      adCount: adsResult.json?.data?.length || 0
-    },
+    summary: { spend: money(totalSpend), impressions: numberText(totalImpressions), clicks: numberText(totalClicks), ctr: percent(avgCtr), cpc: money(avgCpc), cpm: money(avgCpm), campaignCount: campaignsResult.json?.data?.length || 0, adSetCount: adSetRows.length, adCount: adsResult.json?.data?.length || 0 },
     campaigns: campaignsResult.json?.data || [],
-    adSets: adSetsResult.json?.data || [],
+    adSets: adSetRows,
     ads: adsResult.json?.data || [],
     insights: insightRows,
     checkedAt: new Date().toISOString()
@@ -219,47 +175,14 @@ export async function getLiveMetaCreativePreview(activeAccountKey?: string | nul
     return { ok: false, source: 'mock_fallback', readiness, creatives: [], checkedAt: new Date().toISOString() };
   }
 
-  const adsResult = await metaGet(`${adAccountId}/ads`, {
-    fields: 'id,name,status,effective_status,campaign_id,adset_id,creative{id,name,title,body,object_story_spec}',
-    limit: '50'
-  });
-
-  const insightsResult = await metaGet(`${adAccountId}/insights`, {
-    fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,cpm,ctr,reach,frequency,date_start,date_stop',
-    level: 'ad',
-    date_preset: 'last_7d',
-    limit: '50'
-  });
+  const adsResult = await metaGet(`${adAccountId}/ads`, { fields: 'id,name,status,effective_status,campaign_id,adset_id,creative{id,name,title,body,object_story_spec}', limit: '50' });
+  const insightsResult = await metaGet(`${adAccountId}/insights`, { fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,cpm,ctr,reach,frequency,date_start,date_stop', level: 'ad', date_preset: 'last_7d', limit: '50' });
 
   const insightsByAdId = new Map<string, any>((insightsResult.json?.data || []).map((row: any) => [row.ad_id, row]));
   const creatives = (adsResult.json?.data || []).map((ad: any) => {
     const insight = (insightsByAdId.get(ad.id) || {}) as any;
     const text = creativeText(ad.creative);
-    return {
-      id: ad.id,
-      ad: ad.name || ad.id,
-      status: ad.status || '—',
-      effectiveStatus: ad.effective_status || '—',
-      campaignId: ad.campaign_id || '—',
-      adSetId: ad.adset_id || '—',
-      creativeId: ad.creative?.id || '—',
-      creativeName: ad.creative?.name || '—',
-      creativeType: ad.creative?.object_story_spec?.video_data ? 'Video' : 'Image / Link',
-      primaryText: text.primaryText,
-      headline: text.headline,
-      description: text.description,
-      cta: text.callToAction,
-      destinationUrl: text.destinationUrl,
-      frequency: insight.frequency || '0',
-      ctr: insight.ctr ? percent(insight.ctr) : '0.00%',
-      cpc: insight.cpc ? money(insight.cpc) : '$0.00',
-      cpm: insight.cpm ? money(insight.cpm) : '$0.00',
-      spend: insight.spend ? money(insight.spend) : '$0.00',
-      impressions: numberText(insight.impressions || 0),
-      clicks: numberText(insight.clicks || 0),
-      fatigue: fatigueLabel(insight),
-      recommendation: fatigueLabel(insight) === 'Good' ? 'Keep monitoring.' : 'Review copy, creative freshness, and offer match.'
-    };
+    return { id: ad.id, ad: ad.name || ad.id, status: ad.status || '—', effectiveStatus: ad.effective_status || '—', campaignId: ad.campaign_id || '—', adSetId: ad.adset_id || '—', creativeId: ad.creative?.id || '—', creativeName: ad.creative?.name || '—', creativeType: ad.creative?.object_story_spec?.video_data ? 'Video' : 'Image / Link', primaryText: text.primaryText, headline: text.headline, description: text.description, cta: text.callToAction, destinationUrl: text.destinationUrl, frequency: insight.frequency || '0', ctr: insight.ctr ? percent(insight.ctr) : '0.00%', cpc: insight.cpc ? money(insight.cpc) : '$0.00', cpm: insight.cpm ? money(insight.cpm) : '$0.00', spend: insight.spend ? money(insight.spend) : '$0.00', impressions: numberText(insight.impressions || 0), clicks: numberText(insight.clicks || 0), fatigue: fatigueLabel(insight), recommendation: fatigueLabel(insight) === 'Good' ? 'Keep monitoring.' : 'Review copy, creative freshness, and offer match.' };
   });
 
   return { ok: true, source: 'meta_live_read_only_active_account', readiness, activeAccount: readiness.account, creatives, checkedAt: new Date().toISOString() };
