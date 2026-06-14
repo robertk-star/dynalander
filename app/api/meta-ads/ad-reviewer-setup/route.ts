@@ -104,6 +104,8 @@ function getCreativeText(creative: any, post: any) {
     format: video.video_id ? 'Video' : assetFeed.images ? 'Dynamic creative' : link.picture ? 'Image / Link' : postAttachment?.media_type || 'Not returned by Meta',
     objectStoryId: creative?.effective_object_story_id || creative?.object_story_id || 'Not returned by Meta',
     urlTags: creative?.url_tags || 'Not returned by Meta',
+    directCreativeRead: creative?.__directCreativeRead || false,
+    directCreativeError: creative?.__directCreativeError || null,
     readSource: assetBody || assetTitle || assetDescription ? 'asset_feed_spec' : postMessage || postAttachment?.title ? 'object_story' : link.message || link.name ? 'object_story_spec' : creative?.body || creative?.title ? 'creative_fields' : 'limited',
     fieldSources: {
       primaryText: primaryText.source,
@@ -145,10 +147,25 @@ async function readAds(configured: string) {
   return { ...safe, creativeMode: safe.response.ok ? 'safe_fallback' : 'failed', creativeWarning: deep.json?.error?.message || null };
 }
 
+async function readCreativeById(creativeId: string | undefined) {
+  if (!creativeId) return null;
+  const deepFields = 'id,name,title,body,image_url,thumbnail_url,object_story_spec,asset_feed_spec,effective_object_story_id,object_story_id,url_tags,template_url';
+  const result = await metaGet(creativeId, { fields: deepFields });
+  if (result.response.ok) return { ...result.json, __directCreativeRead: true };
+  return { __directCreativeRead: false, __directCreativeError: result.json?.error?.message || 'Direct creative read failed.' };
+}
+
 async function readPostByStoryId(storyId: string | undefined) {
   if (!storyId) return null;
   const result = await metaGet(storyId, { fields: 'message,story,attachments{title,description,url,media,media_type}' });
   return result.response.ok ? result.json : null;
+}
+
+function mergeCreative(nestedCreative: any, directCreative: any) {
+  if (!directCreative || directCreative.__directCreativeRead === false) {
+    return { ...(nestedCreative || {}), __directCreativeRead: false, __directCreativeError: directCreative?.__directCreativeError || null };
+  }
+  return { ...(nestedCreative || {}), ...directCreative, __directCreativeRead: true };
 }
 
 export async function GET(request: Request) {
@@ -168,11 +185,14 @@ export async function GET(request: Request) {
   const adSetIds = Array.from(new Set(adRows.map((ad: any) => ad.adset_id).filter(Boolean)));
   const campaignIds = Array.from(new Set(adRows.map((ad: any) => ad.campaign_id).filter(Boolean)));
 
-  const [adSetResults, campaignResults, postResults] = await Promise.all([
+  const [adSetResults, campaignResults, directCreativeResults] = await Promise.all([
     Promise.all(adSetIds.map((id) => metaGet(String(id), { fields: 'id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget,optimization_goal,billing_event,bid_strategy,targeting' }))),
     Promise.all(campaignIds.map((id) => metaGet(String(id), { fields: 'id,name,status,effective_status,objective,buying_type' }))),
-    Promise.all(adRows.map((ad: any) => readPostByStoryId(ad.creative?.effective_object_story_id || ad.creative?.object_story_id)))
+    Promise.all(adRows.map((ad: any) => readCreativeById(ad.creative?.id)))
   ]);
+
+  const mergedCreatives = adRows.map((ad: any, index: number) => mergeCreative(ad.creative, directCreativeResults[index]));
+  const postResults = await Promise.all(mergedCreatives.map((creative: any) => readPostByStoryId(creative?.effective_object_story_id || creative?.object_story_id)));
 
   const adSets = new Map<string, any>();
   adSetResults.forEach((result) => { if (result.response.ok && result.json?.id) adSets.set(result.json.id, result.json); });
@@ -189,7 +209,7 @@ export async function GET(request: Request) {
       effectiveStatus: ad.effective_status || '—',
       campaign: { id: ad.campaign_id || '—', name: campaign.name || 'Not returned by Meta', objective: campaign.objective || '—', status: campaign.effective_status || campaign.status || '—' },
       adSet: { id: ad.adset_id || '—', name: adSet.name || 'Not returned by Meta', status: adSet.effective_status || adSet.status || '—', dailyBudget: moneyFromMinorUnits(adSet.daily_budget), lifetimeBudget: moneyFromMinorUnits(adSet.lifetime_budget), optimizationGoal: adSet.optimization_goal || '—', billingEvent: adSet.billing_event || '—', bidStrategy: adSet.bid_strategy || '—', targeting: summarizeTargeting(adSet.targeting) },
-      creative: getCreativeText(ad.creative, postResults[index])
+      creative: getCreativeText(mergedCreatives[index], postResults[index])
     };
   });
 
