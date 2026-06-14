@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
+import { useMetaDataMode } from '../_components/useMetaDataMode';
 import { metaRecommendations } from '../_data/metaMockData';
 
 type LivePreview = {
@@ -51,7 +52,7 @@ function buildLiveRecommendations(data: LivePreview | null): RecommendationRow[]
   const cpc = numberFromMoney(data.summary.cpc);
   const activeCampaigns = data.campaigns.filter((row) => row.effective_status === 'ACTIVE' || row.status === 'ACTIVE').length;
   const pausedAds = data.ads.filter((row) => row.effective_status === 'PAUSED' || row.status === 'PAUSED').length;
-  const insight = data.insights[0] || {};
+  const insight = (data.insights[0] || {}) as any;
   const frequency = Number(insight.frequency || 0);
 
   if (ctr < 1 && spend > 0) rows.push({ priority: 'High', area: 'Click quality', recommendation: 'Review Meta ad creative and offer match.', reason: `Live CTR is ${data.summary.ctr}, which may show weak ad-to-audience fit.` });
@@ -66,11 +67,20 @@ function buildLiveRecommendations(data: LivePreview | null): RecommendationRow[]
 }
 
 export default function LiveMetaRecommendations() {
+  const { mode } = useMetaDataMode();
+  const isDemoMode = mode === 'demo';
   const [data, setData] = useState<LivePreview | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('Loading live Meta recommendations...');
 
   async function loadData() {
+    if (isDemoMode) {
+      setData(null);
+      setLoading(false);
+      setMessage('Showing demo/mock Meta recommendations. Switch Meta Data Mode to Connected Live Meta Account to use live data.');
+      return;
+    }
+
     setLoading(true);
     setMessage('Loading live Meta recommendations...');
     try {
@@ -88,10 +98,10 @@ export default function LiveMetaRecommendations() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [isDemoMode]);
 
   const recommendations = useMemo(() => buildLiveRecommendations(data), [data]);
-  const isLive = Boolean(data?.ok && data.summary);
+  const isLive = Boolean(!isDemoMode && data?.ok && data.summary);
 
   return (
     <>
@@ -101,12 +111,12 @@ export default function LiveMetaRecommendations() {
             <h2 style={{ marginTop: 0 }}>{isLive ? 'Live Meta recommendations' : 'Meta recommendations'}</h2>
             <p style={{ color: isLive ? '#166534' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{message}</p>
           </div>
-          <button type="button" style={blueButtonStyle} onClick={loadData}>{loading ? 'Checking...' : 'Refresh recommendations'}</button>
+          <button type="button" style={blueButtonStyle} onClick={loadData}>{isDemoMode ? 'Demo mode active' : loading ? 'Checking...' : 'Refresh recommendations'}</button>
         </div>
       </section>
 
       <div style={gridStyle}>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 32 }}>{isLive ? 'Live read only' : 'Mock fallback'}</strong></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 32 }}>{isLive ? 'Live read only' : isDemoMode ? 'Demo / Mock' : 'Mock fallback'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Spend</div><strong style={{ fontSize: 32 }}>{data?.summary?.spend || '—'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>CTR</div><strong style={{ fontSize: 32 }}>{data?.summary?.ctr || '—'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Recommendations</div><strong style={{ fontSize: 32 }}>{recommendations.length}</strong></div>
