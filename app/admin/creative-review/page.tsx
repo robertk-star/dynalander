@@ -1,10 +1,10 @@
 import AdminShell from '../_components/AdminShell';
-import MetaCreativeLiveReview from './MetaCreativeLiveReview';
+import MetaLiveAdRows from './MetaLiveAdRows';
 
 export default function CreativeReviewPage() {
   return (
-    <AdminShell title="Creative Review" subtitle="Read-only Meta ad review with mock fallback.">
-      <MetaCreativeLiveReview />
+    <AdminShell title="Creative Review" subtitle="Read-only live Meta ad rows for the active account.">
+      <MetaLiveAdRows />
     </AdminShell>
   );
 }
