@@ -1,10 +1,32 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from './_components/adminStyles';
 import { useActiveAccount } from './_components/useActiveAccount';
 import { useActivePlatform } from './_components/useActivePlatform';
+import { useMetaDataMode } from './_components/useMetaDataMode';
 import { getAccountBestTheme, getAccountLeads, getAccountThemePerformance } from './_data/accountScopedData';
-import { metaCampaigns, metaCreatives, metaRecommendations, metaSummary } from './_data/metaMockData';
+
+type MetaPreview = {
+  ok: boolean;
+  source: string;
+  summary: null | {
+    spend: string;
+    impressions: string;
+    clicks: string;
+    ctr: string;
+    cpc: string;
+    cpm: string;
+    campaignCount: number;
+    adSetCount: number;
+    adCount: number;
+  };
+  campaigns: any[];
+  adSets: any[];
+  ads: any[];
+  insights: any[];
+  readiness?: { mode?: string; error?: string };
+};
 
 function GoogleHomeDashboard() {
   const { accountId, selectedAccount } = useActiveAccount();
@@ -21,14 +43,12 @@ function GoogleHomeDashboard() {
         <strong>Google Ads dashboard summary</strong>
         <p style={{ color: '#475569', marginBottom: 0 }}>The summary below is generated from mock Google and landing page records for {selectedAccount.name}.</p>
       </section>
-
       <div style={gridStyle}>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Total clicks</div><strong style={{ fontSize: 34 }}>{totalClicks}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Total leads</div><strong style={{ fontSize: 34 }}>{totalLeads}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Conversion rate</div><strong style={{ fontSize: 34 }}>{conversionRate}%</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Best theme</div><strong style={{ fontSize: 34 }}>{bestTheme}</strong></div>
       </div>
-
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Google theme performance</h2>
         <table style={tableStyle}>
@@ -36,7 +56,6 @@ function GoogleHomeDashboard() {
           <tbody>{themePerformance.map((row) => <tr key={row.theme}><td style={thTdStyle}>{row.theme}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.conversion}</td><td style={thTdStyle}>{row.cpl}</td></tr>)}</tbody>
         </table>
       </section>
-
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Recommended next action</h2>
         <div style={gridStyle}>
@@ -45,7 +64,6 @@ function GoogleHomeDashboard() {
           <div><strong>Open Ad Review</strong><p style={{ color: '#64748b' }}>Review headlines, descriptions, final URLs, sitelinks, and callouts.</p></div>
         </div>
       </section>
-
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Recent leads</h2>
         <table style={tableStyle}>
@@ -59,46 +77,86 @@ function GoogleHomeDashboard() {
 
 function MetaHomeDashboard() {
   const { selectedAccount } = useActiveAccount();
-  const watchCreatives = metaCreatives.filter((creative) => creative.fatigue !== 'Good').length;
-  const bestCampaign = metaCampaigns[0];
+  const { mode } = useMetaDataMode();
+  const isDemoMode = mode === 'demo';
+  const [data, setData] = useState<MetaPreview | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('Loading active account Meta data...');
+
+  async function loadData() {
+    if (isDemoMode) {
+      setData(null);
+      setLoading(false);
+      setMessage('Demo mode is selected. Switch to Connected Live Meta Account to load active account data.');
+      return;
+    }
+
+    setLoading(true);
+    setMessage(`Loading live Meta data for ${selectedAccount.name}...`);
+    try {
+      const response = await fetch(`/api/meta-ads/read-only-preview?accountKey=${encodeURIComponent(selectedAccount.customerId)}`, { cache: 'no-store' });
+      const result = await response.json();
+      setData(result);
+      setMessage(result.ok ? `Showing live Meta data for ${selectedAccount.name}.` : `Live Meta data is not readable for ${selectedAccount.name}.`);
+    } catch {
+      setData(null);
+      setMessage(`Live Meta request failed for ${selectedAccount.name}.`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadData(); }, [isDemoMode, selectedAccount.customerId]);
+
+  const isLive = Boolean(!isDemoMode && data?.ok && data.summary);
+  const summary = data?.summary;
+  const campaigns = data?.campaigns || [];
+  const ads = data?.ads || [];
+  const activeCampaigns = campaigns.filter((row) => row.effective_status === 'ACTIVE' || row.status === 'ACTIVE').length;
+  const activeAds = ads.filter((row) => row.effective_status === 'ACTIVE' || row.status === 'ACTIVE').length;
 
   return (
     <>
-      <section style={{ ...cardStyle, border: '1px solid #fed7aa', background: '#fff7ed' }}>
-        <strong>Meta Ads dashboard summary</strong>
-        <p style={{ color: '#9a3412', marginBottom: 0 }}>The summary below is mock-only for {selectedAccount.name}. DynLander does not pull live Meta data or change Meta ads yet.</p>
-      </section>
-
-      <div style={gridStyle}>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mock spend</div><strong style={{ fontSize: 34 }}>{metaSummary.spend}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mock leads</div><strong style={{ fontSize: 34 }}>{metaSummary.leads}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Cost per lead</div><strong style={{ fontSize: 34 }}>{metaSummary.costPerLead}</strong></div>
-        <div style={cardStyle}><div style={{ color: '#64748b' }}>Creatives to watch</div><strong style={{ fontSize: 34 }}>{watchCreatives}</strong></div>
-      </div>
-
-      <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Meta campaign summary</h2>
-        <table style={tableStyle}>
-          <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Reach</th><th style={thTdStyle}>Frequency</th><th style={thTdStyle}>Leads</th><th style={thTdStyle}>CPL</th><th style={thTdStyle}>AI note</th></tr></thead>
-          <tbody>{metaCampaigns.map((row) => <tr key={row.campaign}><td style={thTdStyle}>{row.campaign}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.reach}</td><td style={thTdStyle}>{row.frequency}</td><td style={thTdStyle}>{row.leads}</td><td style={thTdStyle}>{row.cpl}</td><td style={thTdStyle}>{row.aiNote}</td></tr>)}</tbody>
-        </table>
-      </section>
-
-      <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Recommended next action</h2>
-        <div style={gridStyle}>
-          <div><strong>Review {bestCampaign.campaign}</strong><p style={{ color: '#64748b' }}>This is the strongest mock Meta campaign by lead volume.</p></div>
-          <div><strong>Refresh watched creatives</strong><p style={{ color: '#64748b' }}>{watchCreatives} creative rows are marked Watch or Needs refresh.</p></div>
-          <div><strong>Open Meta Snapshot Preview</strong><p style={{ color: '#64748b' }}>Save a Meta mock snapshot, save a changed snapshot, then detect Meta changes.</p></div>
+      <section style={{ ...cardStyle, border: isLive ? '2px solid #0f766e' : '2px solid #f97316', background: isLive ? '#f0fdfa' : '#fff7ed' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
+          <div>
+            <strong>Meta Ads dashboard summary</strong>
+            <p style={{ color: isLive ? '#0f766e' : '#9a3412', fontWeight: 800, marginBottom: 0, lineHeight: 1.6 }}>{message}</p>
+          </div>
+          <button type="button" onClick={loadData} style={blueButtonStyle}>{loading ? 'Checking...' : isDemoMode ? 'Demo mode active' : 'Refresh active account'}</button>
         </div>
       </section>
 
-      <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>Meta creative status</h2>
+      <div style={gridStyle}>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Active account</div><strong style={{ fontSize: 30 }}>{selectedAccount.name}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{selectedAccount.customerId}</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Mode</div><strong style={{ fontSize: 30 }}>{isLive ? 'Live read-only' : isDemoMode ? 'Demo' : 'Not live for active account'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{isLive ? data?.source : data?.readiness?.mode || 'not_live'}</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Spend</div><strong style={{ fontSize: 34 }}>{summary?.spend || '—'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Rolled up from active account.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Impressions</div><strong style={{ fontSize: 34 }}>{summary?.impressions || '—'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Rolled up from active account.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Clicks</div><strong style={{ fontSize: 34 }}>{summary?.clicks || '—'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Rolled up from active account.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>CTR</div><strong style={{ fontSize: 34 }}>{summary?.ctr || '—'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Rolled up from active account.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Campaigns</div><strong style={{ fontSize: 34 }}>{summary?.campaignCount ?? '—'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{activeCampaigns} active.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Ad sets / Ads</div><strong style={{ fontSize: 34 }}>{summary ? `${summary.adSetCount} / ${summary.adCount}` : '—'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{activeAds} active ads.</p></div>
+      </div>
+
+      {isLive ? <section style={cardStyle}>
+        <h2 style={{ marginTop: 0 }}>Active-account campaign summary</h2>
         <table style={tableStyle}>
-          <thead><tr><th style={thTdStyle}>Ad</th><th style={thTdStyle}>Type</th><th style={thTdStyle}>Frequency</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPL</th><th style={thTdStyle}>Fatigue</th></tr></thead>
-          <tbody>{metaCreatives.map((row) => <tr key={row.ad}><td style={thTdStyle}>{row.ad}</td><td style={thTdStyle}>{row.creativeType}</td><td style={thTdStyle}>{row.frequency}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.cpl}</td><td style={thTdStyle}>{row.fatigue}</td></tr>)}</tbody>
+          <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Objective</th><th style={thTdStyle}>Status</th><th style={thTdStyle}>Effective status</th><th style={thTdStyle}>ID</th></tr></thead>
+          <tbody>{campaigns.map((row) => <tr key={row.id}><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.objective || '—'}</td><td style={thTdStyle}>{row.status || '—'}</td><td style={thTdStyle}>{row.effective_status || '—'}</td><td style={thTdStyle}>{row.id}</td></tr>)}</tbody>
         </table>
+      </section> : null}
+
+      {isLive ? <section style={cardStyle}>
+        <h2 style={{ marginTop: 0 }}>Active-account ads</h2>
+        <table style={tableStyle}>
+          <thead><tr><th style={thTdStyle}>Ad</th><th style={thTdStyle}>Status</th><th style={thTdStyle}>Effective status</th><th style={thTdStyle}>Campaign ID</th><th style={thTdStyle}>Ad set ID</th></tr></thead>
+          <tbody>{ads.map((row) => <tr key={row.id}><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.status || '—'}</td><td style={thTdStyle}>{row.effective_status || '—'}</td><td style={thTdStyle}>{row.campaign_id || '—'}</td><td style={thTdStyle}>{row.adset_id || '—'}</td></tr>)}</tbody>
+        </table>
+      </section> : null}
+
+      <section style={{ ...cardStyle, border: '1px solid #f97316', background: '#fff7ed' }}>
+        <h2 style={{ marginTop: 0 }}>Safety lock</h2>
+        <p style={{ color: '#9a3412', fontWeight: 800, marginBottom: 0 }}>This dashboard resolves the active account first. Meta writes remain disabled.</p>
       </section>
     </>
   );
