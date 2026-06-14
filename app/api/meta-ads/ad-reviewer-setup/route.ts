@@ -36,6 +36,11 @@ function firstAsset(items: any[] | undefined) {
   return found?.url || found?.website_url || found?.link || found?.thumbnail_url || '';
 }
 
+function chooseValue(candidates: Array<{ value: string; source: string }>) {
+  const found = candidates.find((item) => item.value);
+  return { value: found?.value || 'Not returned by Meta', source: found?.source || 'not_found' };
+}
+
 function getCreativeText(creative: any, post: any) {
   const spec = creative?.object_story_spec || {};
   const link = spec.link_data || {};
@@ -51,17 +56,63 @@ function getCreativeText(creative: any, post: any) {
   const postAttachment = post?.attachments?.data?.[0] || {};
   const postMedia = postAttachment?.media || {};
 
+  const primaryText = chooseValue([
+    { value: link.message, source: 'object_story_spec.link_data.message' },
+    { value: video.message, source: 'object_story_spec.video_data.message' },
+    { value: assetBody, source: 'asset_feed_spec.bodies' },
+    { value: creative?.body, source: 'creative.body' },
+    { value: postMessage, source: 'page_post.message_or_story' }
+  ]);
+  const headline = chooseValue([
+    { value: link.name, source: 'object_story_spec.link_data.name' },
+    { value: video.title, source: 'object_story_spec.video_data.title' },
+    { value: assetTitle, source: 'asset_feed_spec.titles' },
+    { value: creative?.title, source: 'creative.title' },
+    { value: postAttachment?.title, source: 'page_post.attachment.title' }
+  ]);
+  const description = chooseValue([
+    { value: link.description, source: 'object_story_spec.link_data.description' },
+    { value: assetDescription, source: 'asset_feed_spec.descriptions' },
+    { value: postAttachment?.description, source: 'page_post.attachment.description' }
+  ]);
+  const ctaValue = chooseValue([
+    { value: cta.type, source: 'object_story_spec.call_to_action.type' },
+    { value: firstText(assetFeed.call_to_action_types, 'type'), source: 'asset_feed_spec.call_to_action_types' }
+  ]);
+  const destinationUrl = chooseValue([
+    { value: link.link, source: 'object_story_spec.link_data.link' },
+    { value: cta.value?.link, source: 'object_story_spec.call_to_action.value.link' },
+    { value: assetLink, source: 'asset_feed_spec.link_urls' },
+    { value: creative?.template_url, source: 'creative.template_url' },
+    { value: postAttachment?.url, source: 'page_post.attachment.url' }
+  ]);
+  const image = chooseValue([
+    { value: link.picture, source: 'object_story_spec.link_data.picture' },
+    { value: assetImage, source: 'asset_feed_spec.images' },
+    { value: creative?.image_url, source: 'creative.image_url' },
+    { value: creative?.thumbnail_url, source: 'creative.thumbnail_url' },
+    { value: postMedia?.image?.src, source: 'page_post.attachment.media.image' }
+  ]);
+
   return {
-    primaryText: link.message || video.message || assetBody || creative?.body || postMessage || 'Not returned by Meta',
-    headline: link.name || video.title || assetTitle || creative?.title || postAttachment?.title || 'Not returned by Meta',
-    description: link.description || assetDescription || postAttachment?.description || 'Not returned by Meta',
-    cta: cta.type || firstText(assetFeed.call_to_action_types, 'type') || 'Not returned by Meta',
-    destinationUrl: link.link || cta.value?.link || assetLink || creative?.template_url || postAttachment?.url || 'Not returned by Meta',
-    imageUrl: link.picture || assetImage || creative?.image_url || creative?.thumbnail_url || postMedia?.image?.src || '',
+    primaryText: primaryText.value,
+    headline: headline.value,
+    description: description.value,
+    cta: ctaValue.value,
+    destinationUrl: destinationUrl.value,
+    imageUrl: image.value === 'Not returned by Meta' ? '' : image.value,
     format: video.video_id ? 'Video' : assetFeed.images ? 'Dynamic creative' : link.picture ? 'Image / Link' : postAttachment?.media_type || 'Not returned by Meta',
     objectStoryId: creative?.effective_object_story_id || creative?.object_story_id || 'Not returned by Meta',
     urlTags: creative?.url_tags || 'Not returned by Meta',
-    readSource: assetBody || assetTitle || assetDescription ? 'asset_feed_spec' : postMessage || postAttachment?.title ? 'object_story' : link.message || link.name ? 'object_story_spec' : creative?.body || creative?.title ? 'creative_fields' : 'limited'
+    readSource: assetBody || assetTitle || assetDescription ? 'asset_feed_spec' : postMessage || postAttachment?.title ? 'object_story' : link.message || link.name ? 'object_story_spec' : creative?.body || creative?.title ? 'creative_fields' : 'limited',
+    fieldSources: {
+      primaryText: primaryText.source,
+      headline: headline.source,
+      description: description.source,
+      cta: ctaValue.source,
+      destinationUrl: destinationUrl.source,
+      imageUrl: image.source
+    }
   };
 }
 
