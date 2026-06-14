@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { googleAdsAccounts } from '../_data/dynlanderAdminData';
 import { useActivePlatform } from './useActivePlatform';
+import { useMetaDataMode } from './useMetaDataMode';
 
 export const activeAccountStorageKey = 'dynlander-active-account';
 
@@ -11,7 +12,7 @@ export type AdminAccountOption = {
   name: string;
   customerId: string;
   market: string;
-  source?: 'google_demo' | 'meta_live';
+  source?: 'google_demo' | 'meta_live' | 'meta_demo';
 };
 
 export const defaultMetaAccount: AdminAccountOption = {
@@ -28,15 +29,17 @@ export function getAccountById(accountId: string, accounts: AdminAccountOption[]
 
 export default function AdminAccountSelector() {
   const { platform } = useActivePlatform();
+  const { mode } = useMetaDataMode();
   const isMeta = platform === 'meta_ads';
+  const isMetaLive = isMeta && mode === 'live';
   const [metaAccount, setMetaAccount] = useState<AdminAccountOption>(defaultMetaAccount);
-  const accountOptions = useMemo(() => isMeta ? [metaAccount] : (googleAdsAccounts as AdminAccountOption[]), [isMeta, metaAccount]);
+  const demoOptions = googleAdsAccounts as AdminAccountOption[];
+  const accountOptions = useMemo(() => isMetaLive ? [metaAccount] : demoOptions, [isMetaLive, metaAccount, demoOptions]);
   const [accountId, setAccountId] = useState(accountOptions[0].id);
   const selectedAccount = getAccountById(accountId, accountOptions);
 
   useEffect(() => {
     async function loadMetaAccount() {
-      if (!isMeta) return;
       try {
         const response = await fetch('/api/meta-ads/status', { cache: 'no-store' });
         const result = await response.json();
@@ -55,18 +58,18 @@ export default function AdminAccountSelector() {
       }
     }
 
-    if (isMeta) {
+    if (isMetaLive) {
       loadMetaAccount();
       return;
     }
 
     const savedValue = window.localStorage.getItem(activeAccountStorageKey);
-    if (savedValue && googleAdsAccounts.some((account) => account.id === savedValue)) {
+    if (savedValue && demoOptions.some((account) => account.id === savedValue)) {
       setAccountId(savedValue);
     } else {
-      setAccountId(googleAdsAccounts[0].id);
+      setAccountId(demoOptions[0].id);
     }
-  }, [isMeta]);
+  }, [isMetaLive, demoOptions]);
 
   function updateAccount(nextAccountId: string) {
     setAccountId(nextAccountId);
