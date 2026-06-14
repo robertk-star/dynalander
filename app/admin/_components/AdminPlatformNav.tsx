@@ -3,9 +3,11 @@
 import AdminAccountSelector from './AdminAccountSelector';
 import { navLinkStyle, navStyle, smallStyle } from './adminStyles';
 import { useActivePlatform, type AdPlatform } from './useActivePlatform';
+import { useMetaDataMode, type MetaDataMode } from './useMetaDataMode';
 
 export default function AdminPlatformNav() {
   const { platform, setPlatform } = useActivePlatform();
+  const { mode, setMode } = useMetaDataMode();
   const isMeta = platform === 'meta_ads';
 
   return (
@@ -21,6 +23,19 @@ export default function AdminPlatformNav() {
           <option value="meta_ads">Facebook / Meta Ads</option>
         </select>
       </div>
+      {isMeta ? (
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 6, color: '#64748b', fontSize: 12, fontWeight: 800 }}>Meta Data Mode</label>
+          <select
+            style={{ width: '100%', borderRadius: 12, border: '1px solid #cbd5e1', padding: '10px 12px', fontWeight: 800 }}
+            value={mode}
+            onChange={(event) => setMode(event.target.value as MetaDataMode)}
+          >
+            <option value="live">Connected Live Meta Account</option>
+            <option value="demo">Demo / Mock Meta Account</option>
+          </select>
+        </div>
+      ) : null}
       <AdminAccountSelector />
       <nav style={navStyle}>
         <a style={navLinkStyle} href="/admin">Dashboard</a>
@@ -36,7 +51,7 @@ export default function AdminPlatformNav() {
         <a style={navLinkStyle} href="/admin/leads">Leads</a>
         {!isMeta ? <a style={navLinkStyle} href="/sell?theme=repairs&city=Plano">View Landing Page</a> : null}
         <a style={{ ...navLinkStyle, marginTop: 24 }} href="/admin/connection-settings">Connection Settings</a>
-        <span style={{ ...smallStyle, display: 'block', marginTop: 8, color: '#64748b' }}>{isMeta ? 'Meta is mock-only for now.' : 'Google Ads is active.'}</span>
+        <span style={{ ...smallStyle, display: 'block', marginTop: 8, color: '#64748b' }}>{isMeta ? (mode === 'live' ? 'Meta live read-only mode.' : 'Meta demo/mock mode.') : 'Google Ads is active.'}</span>
       </nav>
     </>
   );
