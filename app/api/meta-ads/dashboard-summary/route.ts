@@ -70,6 +70,10 @@ function mapInsightRows(rows: any[], nameField: string, idField: string) {
   return rows.map((row) => ({
     id: row[idField] || '—',
     name: row[nameField] || '—',
+    campaignId: row.campaign_id || '—',
+    campaignName: row.campaign_name || '—',
+    adSetId: row.adset_id || '—',
+    adSetName: row.adset_name || '—',
     spend: money(row.spend),
     impressions: numberText(row.impressions),
     clicks: numberText(row.clicks),
@@ -100,8 +104,8 @@ export async function GET(request: Request) {
   const [accountResult, campaignResult, adSetResult, adResult] = await Promise.all([
     metaGet(`${configured}/insights`, { ...params, fields: 'spend,impressions,clicks,cpc,cpm,ctr' }),
     metaGet(`${configured}/insights`, { ...params, level: 'campaign', fields: 'campaign_id,campaign_name,spend,impressions,clicks,cpc,cpm,ctr' }),
-    metaGet(`${configured}/insights`, { ...params, level: 'adset', fields: 'adset_id,adset_name,spend,impressions,clicks,cpc,cpm,ctr' }),
-    metaGet(`${configured}/insights`, { ...params, level: 'ad', fields: 'ad_id,ad_name,spend,impressions,clicks,cpc,cpm,ctr' })
+    metaGet(`${configured}/insights`, { ...params, level: 'adset', fields: 'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,clicks,cpc,cpm,ctr' }),
+    metaGet(`${configured}/insights`, { ...params, level: 'ad', fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,clicks,cpc,cpm,ctr' })
   ]);
 
   if (!accountResult.response.ok) {
