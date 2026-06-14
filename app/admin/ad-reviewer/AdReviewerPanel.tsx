@@ -8,7 +8,7 @@ import { useMetaDataMode } from '../_components/useMetaDataMode';
 
 type Targeting = { ageMin: string; ageMax: string; genders: string; countries: string; regions: string; cities: string; customAudienceCount: number; customAudiences: string[]; excludedCustomAudienceCount: number; excludedCustomAudiences: string[]; publisherPlatforms: string; rawReturned: boolean };
 type FieldSources = { primaryText?: string; headline?: string; description?: string; cta?: string; destinationUrl?: string; imageUrl?: string };
-type Creative = { primaryText: string; headline: string; description: string; cta: string; destinationUrl: string; imageUrl: string; format: string; objectStoryId?: string; urlTags?: string; readSource?: string; fieldSources?: FieldSources };
+type Creative = { primaryText: string; headline: string; description: string; cta: string; destinationUrl: string; imageUrl: string; format: string; objectStoryId?: string; urlTags?: string; readSource?: string; directCreativeRead?: boolean; directCreativeError?: string | null; fieldSources?: FieldSources };
 type SetupAd = { id: string; name: string; status: string; effectiveStatus: string; campaign: { id: string; name: string; objective: string; status: string }; adSet: { id: string; name: string; status: string; dailyBudget: string; lifetimeBudget: string; optimizationGoal: string; billingEvent: string; bidStrategy: string; targeting: Targeting }; creative: Creative };
 type ApiData = { ok: boolean; source: string; creativeMode?: string; creativeWarning?: string | null; ads: SetupAd[]; error?: string };
 type Rec = { area: string; current: string; recommendation: string; reason: string };
@@ -54,6 +54,7 @@ function buildImageReview(ad: SetupAd): Rec[] {
 function FieldSourceDebug({ ad }: { ad: SetupAd }) {
   const sources = ad.creative.fieldSources || {};
   const rows = [
+    { field: 'Direct creative read', value: ad.creative.directCreativeRead ? 'Succeeded' : 'Not available / failed', source: ad.creative.directCreativeError || 'creative_id direct lookup' },
     { field: 'Primary text', value: ad.creative.primaryText, source: sources.primaryText },
     { field: 'Headline', value: ad.creative.headline, source: sources.headline },
     { field: 'Description', value: ad.creative.description, source: sources.description },
@@ -66,8 +67,8 @@ function FieldSourceDebug({ ad }: { ad: SetupAd }) {
       <h2 style={{ marginTop: 0 }}>Field Source Debug</h2>
       <p style={{ color: '#92400e', fontWeight: 800, lineHeight: 1.6 }}>This shows every Meta location DynLander checked for the selected ad fields. If the source says “Not found,” Meta did not return that field in the places currently checked.</p>
       <table style={tableStyle}>
-        <thead><tr><th style={thTdStyle}>Field</th><th style={thTdStyle}>Value found</th><th style={thTdStyle}>Source</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={row.field}><td style={thTdStyle}>{row.field}</td><td style={thTdStyle}>{row.value || 'Not returned by Meta'}</td><td style={thTdStyle}>{sourceLabel(row.source)}</td></tr>)}</tbody>
+        <thead><tr><th style={thTdStyle}>Field</th><th style={thTdStyle}>Value found</th><th style={thTdStyle}>Source / status</th></tr></thead>
+        <tbody>{rows.map((row) => <tr key={row.field}><td style={thTdStyle}>{row.field}</td><td style={thTdStyle}>{row.value || 'Not returned by Meta'}</td><td style={thTdStyle}>{row.field === 'Direct creative read' ? row.source : sourceLabel(row.source)}</td></tr>)}</tbody>
       </table>
     </section>
   );
@@ -117,33 +118,7 @@ export default function AdReviewerPanel() {
           <h2 style={{ marginTop: 0 }}>Meta returned setup</h2>
           {selected.creative.imageUrl ? <img src={selected.creative.imageUrl} alt="Ad creative" style={{ width: '100%', maxHeight: 260, objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: 12, marginBottom: 12 }} /> : <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, color: '#64748b', marginBottom: 12 }}>Image not returned by Meta.</div>}
           {isImageBasedAd(selected) ? <div style={{ border: '1px solid #bfdbfe', background: '#eff6ff', borderRadius: 12, padding: 12, marginBottom: 12, color: '#1e3a8a', fontWeight: 800 }}>This appears to be an image-based ad. Meta returned the image, but not separate primary text/headline fields. Recommendations should focus on the visible image and setup details.</div> : null}
-          <table style={tableStyle}><tbody>
-            <tr><td style={thTdStyle}>Ad</td><td style={thTdStyle}>{selected.name}</td></tr>
-            <tr><td style={thTdStyle}>Status</td><td style={thTdStyle}>{selected.effectiveStatus || selected.status}</td></tr>
-            <tr><td style={thTdStyle}>Campaign</td><td style={thTdStyle}>{selected.campaign.name}</td></tr>
-            <tr><td style={thTdStyle}>Campaign objective</td><td style={thTdStyle}>{selected.campaign.objective}</td></tr>
-            <tr><td style={thTdStyle}>Ad set</td><td style={thTdStyle}>{selected.adSet.name}</td></tr>
-            <tr><td style={thTdStyle}>Primary text returned by Meta</td><td style={thTdStyle}>{selected.creative.primaryText}</td></tr>
-            <tr><td style={thTdStyle}>Headline returned by Meta</td><td style={thTdStyle}>{selected.creative.headline}</td></tr>
-            <tr><td style={thTdStyle}>Description returned by Meta</td><td style={thTdStyle}>{selected.creative.description}</td></tr>
-            <tr><td style={thTdStyle}>CTA returned by Meta</td><td style={thTdStyle}>{selected.creative.cta}</td></tr>
-            <tr><td style={thTdStyle}>Destination URL returned by Meta</td><td style={thTdStyle}>{selected.creative.destinationUrl}</td></tr>
-            <tr><td style={thTdStyle}>URL tags</td><td style={thTdStyle}>{selected.creative.urlTags || 'Not returned by Meta'}</td></tr>
-            <tr><td style={thTdStyle}>Format</td><td style={thTdStyle}>{selected.creative.format}</td></tr>
-            <tr><td style={thTdStyle}>Creative read source</td><td style={thTdStyle}>{selected.creative.readSource || 'standard'}</td></tr>
-            <tr><td style={thTdStyle}>Object story ID</td><td style={thTdStyle}>{selected.creative.objectStoryId || 'Not returned by Meta'}</td></tr>
-            <tr><td style={thTdStyle}>Daily budget</td><td style={thTdStyle}>{selected.adSet.dailyBudget}</td></tr>
-            <tr><td style={thTdStyle}>Lifetime budget</td><td style={thTdStyle}>{selected.adSet.lifetimeBudget}</td></tr>
-            <tr><td style={thTdStyle}>Optimization goal</td><td style={thTdStyle}>{selected.adSet.optimizationGoal}</td></tr>
-            <tr><td style={thTdStyle}>Billing event</td><td style={thTdStyle}>{selected.adSet.billingEvent}</td></tr>
-            <tr><td style={thTdStyle}>Bid strategy</td><td style={thTdStyle}>{selected.adSet.bidStrategy}</td></tr>
-            <tr><td style={thTdStyle}>Target ages</td><td style={thTdStyle}>{selected.adSet.targeting.ageMin} - {selected.adSet.targeting.ageMax}</td></tr>
-            <tr><td style={thTdStyle}>Genders</td><td style={thTdStyle}>{selected.adSet.targeting.genders}</td></tr>
-            <tr><td style={thTdStyle}>Locations</td><td style={thTdStyle}>{selected.adSet.targeting.countries || selected.adSet.targeting.regions || selected.adSet.targeting.cities || 'Not returned by Meta'}</td></tr>
-            <tr><td style={thTdStyle}>Placements</td><td style={thTdStyle}>{selected.adSet.targeting.publisherPlatforms}</td></tr>
-            <tr><td style={thTdStyle}>Custom audiences</td><td style={thTdStyle}>{selected.adSet.targeting.customAudienceCount ? selected.adSet.targeting.customAudiences.join(', ') : 'None returned'}</td></tr>
-            <tr><td style={thTdStyle}>Excluded custom audiences</td><td style={thTdStyle}>{selected.adSet.targeting.excludedCustomAudienceCount ? selected.adSet.targeting.excludedCustomAudiences.join(', ') : 'None returned'}</td></tr>
-          </tbody></table>
+          <table style={tableStyle}><tbody><tr><td style={thTdStyle}>Ad</td><td style={thTdStyle}>{selected.name}</td></tr><tr><td style={thTdStyle}>Status</td><td style={thTdStyle}>{selected.effectiveStatus || selected.status}</td></tr><tr><td style={thTdStyle}>Campaign</td><td style={thTdStyle}>{selected.campaign.name}</td></tr><tr><td style={thTdStyle}>Campaign objective</td><td style={thTdStyle}>{selected.campaign.objective}</td></tr><tr><td style={thTdStyle}>Ad set</td><td style={thTdStyle}>{selected.adSet.name}</td></tr><tr><td style={thTdStyle}>Primary text returned by Meta</td><td style={thTdStyle}>{selected.creative.primaryText}</td></tr><tr><td style={thTdStyle}>Headline returned by Meta</td><td style={thTdStyle}>{selected.creative.headline}</td></tr><tr><td style={thTdStyle}>Description returned by Meta</td><td style={thTdStyle}>{selected.creative.description}</td></tr><tr><td style={thTdStyle}>CTA returned by Meta</td><td style={thTdStyle}>{selected.creative.cta}</td></tr><tr><td style={thTdStyle}>Destination URL returned by Meta</td><td style={thTdStyle}>{selected.creative.destinationUrl}</td></tr><tr><td style={thTdStyle}>URL tags</td><td style={thTdStyle}>{selected.creative.urlTags || 'Not returned by Meta'}</td></tr><tr><td style={thTdStyle}>Format</td><td style={thTdStyle}>{selected.creative.format}</td></tr><tr><td style={thTdStyle}>Creative read source</td><td style={thTdStyle}>{selected.creative.readSource || 'standard'}</td></tr><tr><td style={thTdStyle}>Object story ID</td><td style={thTdStyle}>{selected.creative.objectStoryId || 'Not returned by Meta'}</td></tr><tr><td style={thTdStyle}>Daily budget</td><td style={thTdStyle}>{selected.adSet.dailyBudget}</td></tr><tr><td style={thTdStyle}>Lifetime budget</td><td style={thTdStyle}>{selected.adSet.lifetimeBudget}</td></tr><tr><td style={thTdStyle}>Optimization goal</td><td style={thTdStyle}>{selected.adSet.optimizationGoal}</td></tr><tr><td style={thTdStyle}>Billing event</td><td style={thTdStyle}>{selected.adSet.billingEvent}</td></tr><tr><td style={thTdStyle}>Bid strategy</td><td style={thTdStyle}>{selected.adSet.bidStrategy}</td></tr><tr><td style={thTdStyle}>Target ages</td><td style={thTdStyle}>{selected.adSet.targeting.ageMin} - {selected.adSet.targeting.ageMax}</td></tr><tr><td style={thTdStyle}>Genders</td><td style={thTdStyle}>{selected.adSet.targeting.genders}</td></tr><tr><td style={thTdStyle}>Locations</td><td style={thTdStyle}>{selected.adSet.targeting.countries || selected.adSet.targeting.regions || selected.adSet.targeting.cities || 'Not returned by Meta'}</td></tr><tr><td style={thTdStyle}>Placements</td><td style={thTdStyle}>{selected.adSet.targeting.publisherPlatforms}</td></tr><tr><td style={thTdStyle}>Custom audiences</td><td style={thTdStyle}>{selected.adSet.targeting.customAudienceCount ? selected.adSet.targeting.customAudiences.join(', ') : 'None returned'}</td></tr><tr><td style={thTdStyle}>Excluded custom audiences</td><td style={thTdStyle}>{selected.adSet.targeting.excludedCustomAudienceCount ? selected.adSet.targeting.excludedCustomAudiences.join(', ') : 'None returned'}</td></tr></tbody></table>
           <FieldSourceDebug ad={selected} />
         </div>
         <div style={{ ...cardStyle, border: '1px solid #bfdbfe', background: '#eff6ff' }}>
