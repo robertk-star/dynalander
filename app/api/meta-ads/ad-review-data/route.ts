@@ -2,7 +2,9 @@ import { getLiveMetaCreativePreview } from '../../../../lib/meta-ads/readOnlySer
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
-  const result = await getLiveMetaCreativePreview();
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const activeAccountKey = url.searchParams.get('accountKey') || url.searchParams.get('adAccountId');
+  const result = await getLiveMetaCreativePreview(activeAccountKey);
   return Response.json(result);
 }
