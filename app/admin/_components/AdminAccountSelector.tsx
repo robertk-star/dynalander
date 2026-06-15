@@ -12,7 +12,7 @@ export type AdminAccountOption = {
   name: string;
   customerId: string;
   market: string;
-  source?: 'google_demo' | 'meta_live' | 'meta_demo';
+  source?: 'google_demo' | 'google_live' | 'meta_live' | 'meta_demo';
 };
 
 export const defaultMetaAccount: AdminAccountOption = {
@@ -21,6 +21,14 @@ export const defaultMetaAccount: AdminAccountOption = {
   customerId: 'META_AD_ACCOUNT_ID',
   market: 'Facebook / Meta Ads',
   source: 'meta_live'
+};
+
+export const defaultGoogleLiveAccount: AdminAccountOption = {
+  id: 'google-connected-account',
+  name: 'Connected Google Ads Account',
+  customerId: 'GOOGLE_ADS_CUSTOMER_ID',
+  market: 'Google Ads',
+  source: 'google_live'
 };
 
 export function getAccountById(accountId: string, accounts: AdminAccountOption[] = googleAdsAccounts as AdminAccountOption[]) {
@@ -32,9 +40,15 @@ export default function AdminAccountSelector() {
   const { mode } = useMetaDataMode();
   const isMeta = platform === 'meta_ads';
   const isMetaLive = isMeta && mode === 'live';
+  const isGoogle = platform === 'google_ads';
   const [metaAccount, setMetaAccount] = useState<AdminAccountOption>(defaultMetaAccount);
+  const [googleLiveAccount, setGoogleLiveAccount] = useState<AdminAccountOption>(defaultGoogleLiveAccount);
   const demoOptions = googleAdsAccounts as AdminAccountOption[];
-  const accountOptions = useMemo(() => isMetaLive ? [metaAccount] : demoOptions, [isMetaLive, metaAccount, demoOptions]);
+  const accountOptions = useMemo(() => {
+    if (isMetaLive) return [metaAccount];
+    if (isGoogle) return [googleLiveAccount];
+    return demoOptions;
+  }, [isMetaLive, isGoogle, metaAccount, googleLiveAccount, demoOptions]);
   const [accountId, setAccountId] = useState(accountOptions[0].id);
   const selectedAccount = getAccountById(accountId, accountOptions);
 
@@ -58,8 +72,31 @@ export default function AdminAccountSelector() {
       }
     }
 
+    async function loadGoogleAccount() {
+      try {
+        const response = await fetch('/api/google-ads/status', { cache: 'no-store' });
+        const result = await response.json();
+        const liveId = result?.customerId || 'GOOGLE_ADS_CUSTOMER_ID';
+        const liveName = result?.account?.name || `Google Ads ${liveId}`;
+        const market = result?.loginCustomerId ? `Google Ads · Manager ${result.loginCustomerId}` : 'Google Ads · Direct account';
+        const nextAccount = { id: 'google-connected-account', name: liveName, customerId: liveId, market, source: 'google_live' as const };
+        setGoogleLiveAccount(nextAccount);
+        setAccountId(nextAccount.id);
+        window.localStorage.setItem(activeAccountStorageKey, nextAccount.id);
+        window.dispatchEvent(new CustomEvent('dynlander-active-account-change', { detail: nextAccount.id }));
+      } catch {
+        setGoogleLiveAccount(defaultGoogleLiveAccount);
+        setAccountId(defaultGoogleLiveAccount.id);
+      }
+    }
+
     if (isMetaLive) {
       loadMetaAccount();
+      return;
+    }
+
+    if (isGoogle) {
+      loadGoogleAccount();
       return;
     }
 
@@ -69,7 +106,7 @@ export default function AdminAccountSelector() {
     } else {
       setAccountId(demoOptions[0].id);
     }
-  }, [isMetaLive, demoOptions]);
+  }, [isMetaLive, isGoogle, demoOptions]);
 
   function updateAccount(nextAccountId: string) {
     setAccountId(nextAccountId);
