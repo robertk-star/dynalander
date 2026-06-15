@@ -56,14 +56,36 @@ function numberText(value: string | number | undefined) {
   return Number(value || 0).toLocaleString();
 }
 
+function rowResults(row: any) {
+  const actions = Array.isArray(row.actions) ? row.actions : [];
+  const preferred = [
+    'lead',
+    'onsite_conversion.lead_grouped',
+    'offsite_conversion.fb_pixel_lead',
+    'onsite_conversion.messaging_conversation_started_7d',
+    'complete_registration',
+    'offsite_conversion.fb_pixel_complete_registration',
+    'purchase',
+    'offsite_conversion.fb_pixel_purchase'
+  ];
+
+  const preferredTotal = actions
+    .filter((action: any) => preferred.includes(action.action_type))
+    .reduce((sum: number, action: any) => sum + Number(action.value || 0), 0);
+
+  if (preferredTotal > 0) return preferredTotal;
+  return actions.reduce((sum: number, action: any) => sum + Number(action.value || 0), 0);
+}
+
 function summarize(rows: any[]) {
   const spend = rows.reduce((sum, row) => sum + Number(row.spend || 0), 0);
   const impressions = rows.reduce((sum, row) => sum + Number(row.impressions || 0), 0);
   const clicks = rows.reduce((sum, row) => sum + Number(row.clicks || 0), 0);
+  const results = rows.reduce((sum, row) => sum + rowResults(row), 0);
   const ctr = impressions ? (clicks / impressions) * 100 : 0;
   const cpc = clicks ? spend / clicks : 0;
   const cpm = impressions ? (spend / impressions) * 1000 : 0;
-  return { spend: money(spend), impressions: numberText(impressions), clicks: numberText(clicks), ctr: percent(ctr), cpc: money(cpc), cpm: money(cpm) };
+  return { spend: money(spend), results: numberText(results), impressions: numberText(impressions), clicks: numberText(clicks), ctr: percent(ctr), cpc: money(cpc), cpm: money(cpm) };
 }
 
 function mapInsightRows(rows: any[], nameField: string, idField: string) {
@@ -74,6 +96,7 @@ function mapInsightRows(rows: any[], nameField: string, idField: string) {
     campaignName: row.campaign_name || '—',
     adSetId: row.adset_id || '—',
     adSetName: row.adset_name || '—',
+    results: numberText(rowResults(row)),
     spend: money(row.spend),
     impressions: numberText(row.impressions),
     clicks: numberText(row.clicks),
@@ -101,11 +124,12 @@ export async function GET(request: Request) {
   }
 
   const params = { time_range: JSON.stringify({ since: range.since, until: range.until }), limit: '100' };
+  const fields = 'spend,impressions,clicks,cpc,cpm,ctr,actions';
   const [accountResult, campaignResult, adSetResult, adResult] = await Promise.all([
-    metaGet(`${configured}/insights`, { ...params, fields: 'spend,impressions,clicks,cpc,cpm,ctr' }),
-    metaGet(`${configured}/insights`, { ...params, level: 'campaign', fields: 'campaign_id,campaign_name,spend,impressions,clicks,cpc,cpm,ctr' }),
-    metaGet(`${configured}/insights`, { ...params, level: 'adset', fields: 'campaign_id,campaign_name,adset_id,adset_name,spend,impressions,clicks,cpc,cpm,ctr' }),
-    metaGet(`${configured}/insights`, { ...params, level: 'ad', fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,clicks,cpc,cpm,ctr' })
+    metaGet(`${configured}/insights`, { ...params, fields }),
+    metaGet(`${configured}/insights`, { ...params, level: 'campaign', fields: `campaign_id,campaign_name,${fields}` }),
+    metaGet(`${configured}/insights`, { ...params, level: 'adset', fields: `campaign_id,campaign_name,adset_id,adset_name,${fields}` }),
+    metaGet(`${configured}/insights`, { ...params, level: 'ad', fields: `campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,${fields}` })
   ]);
 
   if (!accountResult.response.ok) {
