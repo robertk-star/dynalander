@@ -6,14 +6,14 @@ import { blueButtonStyle, cardStyle, inputStyle } from '../_components/adminStyl
 type Saved = { id: string; at: string; accountKey: string; range: string; grade: string; problems: number; fixes: number; summary: string };
 const KEY = 'dynalander.aiReview.saved';
 
-function text(value: unknown) {
+function text(value: unknown): string {
   if (value === undefined || value === null || value === '') return '—';
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return value.map(text).join('; ');
+  if (Array.isArray(value)) return value.map((item) => text(item)).join('; ');
   return JSON.stringify(value);
 }
 
-function count(value: unknown) {
+function count(value: unknown): number {
   if (!value) return 0;
   return Array.isArray(value) ? value.length : 1;
 }
