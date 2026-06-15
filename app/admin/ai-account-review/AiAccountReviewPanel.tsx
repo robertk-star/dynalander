@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, inputStyle, labelStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
+import SavedReviewBox from './SavedReviewBox';
 
 type RangeKey = 'last_7d' | 'last_30d' | 'this_month' | 'last_month';
 
@@ -186,6 +187,8 @@ export default function AiAccountReviewPanel() {
         <label style={labelStyle}>Report range<select style={inputStyle} value={range} onChange={(event) => setRange(event.target.value as RangeKey)}><option value="last_7d">Last 7 days</option><option value="last_30d">Last 30 days</option><option value="this_month">This month</option><option value="last_month">Last month</option></select></label>
         <button type="button" onClick={runReview} style={{ ...blueButtonStyle, marginTop: 12 }}>{loading ? 'Running...' : 'Apply range and rerun'}</button>
       </section>
+
+      <SavedReviewBox data={data} accountKey={selectedAccount.customerId} range={range} />
 
       {data?.dataSummary ? (
         <div style={gridStyle}>
