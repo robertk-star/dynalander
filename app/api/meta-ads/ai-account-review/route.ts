@@ -39,6 +39,10 @@ function moneyNumber(value: string | number | undefined) {
   return Number(value || 0);
 }
 
+function isActiveStatus(row: any) {
+  return String(row.effective_status || row.status || '').toUpperCase() === 'ACTIVE';
+}
+
 function compactInsightRows(rows: any[], limit = 100) {
   return rows.slice(0, limit).map((row) => ({
     ...row,
@@ -90,44 +94,58 @@ function compactAd(ad: any) {
 }
 
 function fallbackReview(payload: any, reason: string) {
+  const activeAdSetIds = new Set((payload?.adSetsActive || []).map((row: any) => row.id));
   const ads = payload?.insights?.ads || [];
   const spendNoLeads = ads
+    .filter((row: any) => activeAdSetIds.has(row.adset_id))
     .filter((row: any) => Number(row.spend_number || 0) > 0 && Number(row.lead_results || 0) === 0)
     .slice(0, 5)
     .map((row: any) => `${row.ad_name || row.ad_id} spent $${Number(row.spend_number || 0).toFixed(2)} with 0 leads.`);
 
-  const evidenceBasedRecommendations = spendNoLeads.map((finding: string) => ({
-    name: 'Spend with no leads',
-    category: 'Performance',
-    issue: finding,
-    evidence: finding,
-    whyItMatters: 'Spend without leads can raise cost per lead and waste budget.',
-    recommendation: 'Review the ad, audience, and offer before increasing budget.',
-    suggestedNextStep: 'Check the ad creative and ad set targeting first.',
+  const activeAdSetReview = (payload?.adSetsActive || []).map((adSet: any) => ({
+    name: adSet.name,
+    category: 'Active ad set',
+    issue: 'Active ad set included in review.',
+    evidence: `Status: ${adSet.effective_status || adSet.status || 'unknown'}. Optimization: ${adSet.optimization_goal || 'not returned'}.`,
+    whyItMatters: 'Active ad sets are where current budget and delivery decisions matter most.',
+    recommendation: 'Review performance, targeting, and optimization before making budget changes.',
+    suggestedNextStep: 'Compare spend, leads, and cost per lead for this active ad set.',
     riskLevel: 'Medium',
-    expectedImpact: 'May reduce wasted spend.',
-    priority: spendNoLeads.length ? 'High' : 'Low',
-    priorityScore: spendNoLeads.length ? 8 : 3
+    expectedImpact: 'Better budget decisions on active delivery.',
+    priority: 'Medium',
+    priorityScore: 5
   }));
 
   return {
     overallGrade: spendNoLeads.length ? 'C' : 'B',
     summary: `Limited review only. ${reason}`,
-    topProblems: spendNoLeads.length ? spendNoLeads : ['No basic spend-without-leads issue found in the limited review.'],
-    topRecommendedChanges: spendNoLeads.length ? ['Review ads spending with no leads before increasing budget.'] : ['Run the full AI review for deeper setup and creative recommendations.'],
+    topProblems: spendNoLeads.length ? spendNoLeads : ['No basic active spend-without-leads issue found in the limited review.'],
+    topRecommendedChanges: spendNoLeads.length ? ['Review active ads spending with no leads before increasing budget.'] : ['Run the full AI review for deeper setup and creative recommendations.'],
     budgetReview: { status: spendNoLeads.length ? 'Needs review' : 'Good', findings: spendNoLeads },
     campaignReview: [],
-    adSetReview: [],
+    adSetReview: activeAdSetReview,
     adReview: [],
     audienceReview: { status: 'Needs review', findings: ['Full audience review requires AI output.'] },
     creativeReview: { status: 'Needs review', findings: ['Full creative review requires AI output.'] },
-    evidenceBasedRecommendations,
-    whatToFixFirst: spendNoLeads.length ? ['Review spend with no leads.'] : ['No urgent fallback issue found.']
+    evidenceBasedRecommendations: activeAdSetReview,
+    whatToFixFirst: spendNoLeads.length ? ['Review active spend with no leads.'] : ['Review active ad set performance before paused ad set history.']
   };
 }
 
 function buildPrompt(payload: any) {
-  return `Review this Meta Ads lead-generation account. Return JSON only. Use evidence from the data. Each review row should include name, category, issue, evidence, whyItMatters, recommendation, suggestedNextStep, riskLevel, expectedImpact, priority, and priorityScore from 1 to 10. Include an evidenceBasedRecommendations array with the highest priority findings. JSON keys: overallGrade, summary, topProblems, topRecommendedChanges, budgetReview, campaignReview, adSetReview, adReview, audienceReview, creativeReview, evidenceBasedRecommendations, whatToFixFirst. Data: ${JSON.stringify(payload).slice(0, 45000)}`;
+  return `Review this Meta Ads lead-generation account. Return JSON only.
+
+Important rules:
+- Focus first on ACTIVE campaigns, ACTIVE ad sets, and ACTIVE ads.
+- Do not let paused ad sets dominate the review. Paused items are historical context only.
+- If a paused ad set performed badly, mention it only as a historical learning, not as the main fix.
+- Review every active ad set in adSetReview. If an active ad set looks okay, say that no urgent change is needed and cite the evidence.
+- Use evidence from the data. Each review row should include name, category, issue, evidence, whyItMatters, recommendation, suggestedNextStep, riskLevel, expectedImpact, priority, and priorityScore from 1 to 10.
+- Include evidenceBasedRecommendations with the highest priority active-account findings.
+
+JSON keys: overallGrade, summary, topProblems, topRecommendedChanges, budgetReview, campaignReview, adSetReview, adReview, audienceReview, creativeReview, evidenceBasedRecommendations, whatToFixFirst.
+
+Data: ${JSON.stringify(payload).slice(0, 45000)}`;
 }
 
 async function runAiReview(payload: any): Promise<AiReviewResult> {
@@ -143,7 +161,7 @@ async function runAiReview(payload: any): Promise<AiReviewResult> {
       temperature: 0.2,
       response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: 'You review Meta Ads account data and return valid JSON only.' },
+        { role: 'system', content: 'You review Meta Ads account data and return valid JSON only. Prioritize active ad sets over paused history.' },
         { role: 'user', content: buildPrompt(payload) }
       ]
     })
@@ -184,12 +202,22 @@ export async function GET(request: Request) {
 
   if (!accountResult.response.ok) return Response.json({ ok: false, error: accountResult.json?.error?.message || 'Could not read Meta account.', review: null });
 
+  const campaigns = campaignResult.json?.data || [];
+  const adSets = (adSetResult.json?.data || []).map(compactAdSet);
+  const ads = (adResult.json?.data || []).map(compactAd);
+
   const payload = {
     datePreset: preset,
     account: accountResult.json,
-    campaigns: campaignResult.json?.data || [],
-    adSets: (adSetResult.json?.data || []).map(compactAdSet),
-    ads: (adResult.json?.data || []).map(compactAd),
+    campaigns,
+    campaignsActive: campaigns.filter(isActiveStatus),
+    campaignsPausedOrInactive: campaigns.filter((row: any) => !isActiveStatus(row)),
+    adSets,
+    adSetsActive: adSets.filter(isActiveStatus),
+    adSetsPausedOrInactive: adSets.filter((row: any) => !isActiveStatus(row)),
+    ads,
+    adsActive: ads.filter(isActiveStatus),
+    adsPausedOrInactive: ads.filter((row: any) => !isActiveStatus(row)),
     insights: {
       campaigns: compactInsightRows(campaignInsightsResult.json?.data || []),
       adSets: compactInsightRows(adSetInsightsResult.json?.data || []),
@@ -201,7 +229,7 @@ export async function GET(request: Request) {
 
   return Response.json({
     ok: true,
-    source: 'meta_ai_account_review_phase_2',
+    source: 'meta_ai_account_review_active_focus',
     adAccountId: configured,
     range,
     aiConfigured: ai.aiConfigured,
@@ -209,8 +237,11 @@ export async function GET(request: Request) {
     review: ai.review,
     dataSummary: {
       campaignCount: payload.campaigns.length,
+      activeCampaignCount: payload.campaignsActive.length,
       adSetCount: payload.adSets.length,
+      activeAdSetCount: payload.adSetsActive.length,
       adCount: payload.ads.length,
+      activeAdCount: payload.adsActive.length,
       campaignInsightRows: payload.insights.campaigns.length,
       adSetInsightRows: payload.insights.adSets.length,
       adInsightRows: payload.insights.ads.length
