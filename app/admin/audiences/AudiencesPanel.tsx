@@ -21,6 +21,8 @@ type Audience = {
   type: string;
   subtype: string;
   status: string;
+  statusTone?: 'ready' | 'blocked' | 'neutral';
+  statusRaw?: string;
   size: string;
   description: string;
   created: string;
@@ -43,6 +45,21 @@ type ApiData = {
 function usageText(usage: Usage[]) {
   if (!usage.length) return 'Not found in active ad set targeting.';
   return usage.map((item) => `${item.useType}: ${item.campaignName} / ${item.adSetName} (${item.effectiveStatus || item.status})`).join('\n');
+}
+
+function StatusBadge({ audience }: { audience: Audience }) {
+  const tone = audience.statusTone || 'neutral';
+  const style = tone === 'ready'
+    ? { background: '#dcfce7', color: '#166534', border: '1px solid #22c55e' }
+    : tone === 'blocked'
+      ? { background: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' }
+      : { background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' };
+
+  return (
+    <span style={{ ...style, display: 'inline-block', borderRadius: 999, padding: '6px 10px', fontWeight: 900 }} title={audience.statusRaw ? `Meta raw status: ${audience.statusRaw}` : undefined}>
+      {audience.status}
+    </span>
+  );
 }
 
 export default function AudiencesPanel() {
@@ -115,7 +132,7 @@ export default function AudiencesPanel() {
                   {audience.description !== '—' ? <div style={{ color: '#64748b', marginTop: 6 }}>{audience.description}</div> : null}
                 </td>
                 <td style={thTdStyle}>{audience.type}<div style={{ color: '#64748b', fontSize: 12 }}>{audience.subtype}</div></td>
-                <td style={thTdStyle}>{audience.status}</td>
+                <td style={thTdStyle}><StatusBadge audience={audience} /></td>
                 <td style={thTdStyle}>{audience.size}</td>
                 <td style={thTdStyle}>{audience.source}</td>
                 <td style={{ ...thTdStyle, whiteSpace: 'pre-line' }}>{usageText(audience.usage)}</td>
