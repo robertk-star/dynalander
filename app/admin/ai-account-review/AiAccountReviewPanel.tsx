@@ -9,10 +9,16 @@ type RangeKey = 'last_7d' | 'last_30d' | 'this_month' | 'last_month';
 
 type ReviewItem = {
   name?: string;
+  category?: string;
   issue?: string;
   evidence?: string;
+  whyItMatters?: string;
   recommendation?: string;
+  suggestedNextStep?: string;
+  riskLevel?: string;
+  expectedImpact?: string;
   priority?: string;
+  priorityScore?: number | string;
 };
 
 type Review = {
@@ -26,6 +32,7 @@ type Review = {
   adReview?: ReviewItem[];
   audienceReview?: { status?: string; findings?: string[] };
   creativeReview?: { status?: string; findings?: string[] };
+  evidenceBasedRecommendations?: ReviewItem[];
   whatToFixFirst?: string[];
 };
 
@@ -53,20 +60,50 @@ function BulletList({ items }: { items?: string[] }) {
   return <ul>{items.map((item, index) => <li key={`${item}-${index}`} style={{ marginBottom: 8 }}>{item}</li>)}</ul>;
 }
 
+function PriorityBadge({ value }: { value?: string | number }) {
+  const text = value === undefined || value === null || value === '' ? '—' : String(value);
+  const high = text.toLowerCase().includes('high') || Number(text) >= 8;
+  const medium = text.toLowerCase().includes('medium') || (Number(text) >= 5 && Number(text) < 8);
+  const style = high
+    ? { background: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' }
+    : medium
+      ? { background: '#ffedd5', color: '#9a3412', border: '1px solid #f97316' }
+      : { background: '#dcfce7', color: '#166534', border: '1px solid #22c55e' };
+  return <span style={{ ...style, display: 'inline-block', borderRadius: 999, padding: '6px 10px', fontWeight: 900 }}>{text}</span>;
+}
+
 function ReviewTable({ title, rows }: { title: string; rows?: ReviewItem[] }) {
   return (
     <section style={cardStyle}>
       <h2 style={{ marginTop: 0 }}>{title}</h2>
       <table style={tableStyle}>
-        <thead><tr><th style={thTdStyle}>Item</th><th style={thTdStyle}>Issue</th><th style={thTdStyle}>Evidence</th><th style={thTdStyle}>Recommendation</th><th style={thTdStyle}>Priority</th></tr></thead>
+        <thead>
+          <tr>
+            <th style={thTdStyle}>Item</th>
+            <th style={thTdStyle}>Category</th>
+            <th style={thTdStyle}>Issue</th>
+            <th style={thTdStyle}>Evidence</th>
+            <th style={thTdStyle}>Why it matters</th>
+            <th style={thTdStyle}>Recommended fix</th>
+            <th style={thTdStyle}>Next step</th>
+            <th style={thTdStyle}>Risk</th>
+            <th style={thTdStyle}>Impact</th>
+            <th style={thTdStyle}>Priority</th>
+          </tr>
+        </thead>
         <tbody>
           {(rows || []).map((row, index) => (
             <tr key={`${title}-${index}`}>
               <td style={thTdStyle}>{row.name || '—'}</td>
+              <td style={thTdStyle}>{row.category || '—'}</td>
               <td style={thTdStyle}>{row.issue || '—'}</td>
               <td style={thTdStyle}>{row.evidence || '—'}</td>
+              <td style={thTdStyle}>{row.whyItMatters || '—'}</td>
               <td style={thTdStyle}>{row.recommendation || '—'}</td>
-              <td style={thTdStyle}>{row.priority || '—'}</td>
+              <td style={thTdStyle}>{row.suggestedNextStep || '—'}</td>
+              <td style={thTdStyle}>{row.riskLevel || '—'}</td>
+              <td style={thTdStyle}>{row.expectedImpact || '—'}</td>
+              <td style={thTdStyle}><PriorityBadge value={row.priorityScore || row.priority} /></td>
             </tr>
           ))}
         </tbody>
@@ -156,6 +193,8 @@ export default function AiAccountReviewPanel() {
         <section style={cardStyle}><h2 style={{ marginTop: 0 }}>Recommended Changes</h2><BulletList items={review?.topRecommendedChanges} /></section>
         <section style={cardStyle}><h2 style={{ marginTop: 0 }}>What to Fix First</h2><BulletList items={review?.whatToFixFirst} /></section>
       </div>
+
+      <ReviewTable title="Evidence-Based Recommendations" rows={review?.evidenceBasedRecommendations} />
 
       <div style={gridStyle}>
         <section style={cardStyle}><h2 style={{ marginTop: 0 }}>Budget Review</h2><strong>{review?.budgetReview?.status || '—'}</strong><BulletList items={review?.budgetReview?.findings} /></section>
