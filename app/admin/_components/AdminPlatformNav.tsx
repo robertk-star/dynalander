@@ -57,7 +57,7 @@ export default function AdminPlatformNav() {
       <nav style={navStyle}>
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/dashboard-summary')} href="/admin/dashboard-summary">Dashboard Summary</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/ad-reviewer')} href="/admin/ad-reviewer">Ad Reviewer</a> : null}
-        {isMeta ? <a style={activeNavStyle(pathname, '/admin/meta-ads')} href="/admin/meta-ads">Meta Ads Intelligence</a> : <a style={activeNavStyle(pathname, '/admin/google-ads')} href="/admin/google-ads">Google Ads Intelligence</a>}
+        {!isMeta ? <a style={activeNavStyle(pathname, '/admin/google-ads')} href="/admin/google-ads">Google Ads Intelligence</a> : null}
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/live-query-preview')} href="/admin/live-query-preview">Live Query Preview</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/meta-ads-connection')} href="/admin/meta-ads-connection">Meta Ads Connection</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/meta-audit')} href="/admin/meta-audit">Meta Safety Audit</a> : null}
@@ -67,7 +67,7 @@ export default function AdminPlatformNav() {
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/ad-review')} href="/admin/ad-review">Ad Review</a> : null}
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/themes')} href="/admin/themes">Theme Editor</a> : null}
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/url-builder')} href="/admin/url-builder">URL Builder</a> : null}
-        <a style={activeNavStyle(pathname, '/admin/leads')} href="/admin/leads">Leads</a>
+        {!isMeta ? <a style={activeNavStyle(pathname, '/admin/leads')} href="/admin/leads">Leads</a> : null}
         {!isMeta ? <a style={navLinkStyle} href="/sell?theme=repairs&city=Plano">View Landing Page</a> : null}
         <a style={activeNavStyle(pathname, '/admin/connection-settings', { marginTop: 24 })} href="/admin/connection-settings">Connection Settings</a>
         <span style={{ ...smallStyle, display: 'block', marginTop: 8, color: '#64748b' }}>{isMeta ? (mode === 'live' ? 'Meta live read-only mode.' : 'Meta demo/mock mode.') : 'Google Ads is active.'}</span>
