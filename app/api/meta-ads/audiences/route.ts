@@ -29,19 +29,30 @@ async function metaGet(path: string, params: Record<string, string>) {
   return { response, json };
 }
 
-function statusText(value: any) {
-  if (!value) return '—';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'object') return value.status || value.code || value.description || JSON.stringify(value);
-  return String(value);
+function statusRawValue(value: any) {
+  if (!value) return null;
+  if (typeof value === 'object') return value.code ?? value.status ?? value.description ?? JSON.stringify(value);
+  return value;
+}
+
+function normalizeAudienceStatus(value: any) {
+  const raw = statusRawValue(value);
+  const text = raw === null || raw === undefined || raw === '' ? '—' : String(raw);
+  if (text === '200') return { label: 'Ready', tone: 'ready', raw: text };
+  if (text === '300') return { label: 'Blocked', tone: 'blocked', raw: text };
+  if (text.toLowerCase().includes('ready')) return { label: 'Ready', tone: 'ready', raw: text };
+  if (text.toLowerCase().includes('block') || text.toLowerCase().includes('disable') || text.toLowerCase().includes('error')) return { label: 'Blocked', tone: 'blocked', raw: text };
+  return { label: text, tone: 'neutral', raw: text };
 }
 
 function audienceStatus(row: any) {
-  return statusText(row.delivery_status) !== '—'
-    ? statusText(row.delivery_status)
-    : statusText(row.operation_status) !== '—'
-      ? statusText(row.operation_status)
-      : statusText(row.status);
+  const delivery = normalizeAudienceStatus(row.delivery_status);
+  if (delivery.label !== '—') return delivery;
+
+  const operation = normalizeAudienceStatus(row.operation_status);
+  if (operation.label !== '—') return operation;
+
+  return normalizeAudienceStatus(row.status);
 }
 
 function formatSize(row: any) {
@@ -71,20 +82,25 @@ function collectAudienceRefs(value: any, useType: string, output: Array<{ id: st
 }
 
 function mapAudiences(rows: any[], type: string, usageById: Map<string, AudienceUsage[]>) {
-  return rows.map((row) => ({
-    id: row.id || '—',
-    name: row.name || '—',
-    type,
-    subtype: row.subtype || row.audience_subtype || '—',
-    status: audienceStatus(row),
-    size: formatSize(row),
-    description: row.description || '—',
-    created: row.creation_time || '—',
-    updated: row.update_time || '—',
-    retentionDays: row.retention_days || '—',
-    source: row.customer_file_source || row.data_source?.type || row.data_source?.sub_type || '—',
-    usage: usageById.get(String(row.id)) || []
-  }));
+  return rows.map((row) => {
+    const status = audienceStatus(row);
+    return {
+      id: row.id || '—',
+      name: row.name || '—',
+      type,
+      subtype: row.subtype || row.audience_subtype || '—',
+      status: status.label,
+      statusTone: status.tone,
+      statusRaw: status.raw,
+      size: formatSize(row),
+      description: row.description || '—',
+      created: row.creation_time || '—',
+      updated: row.update_time || '—',
+      retentionDays: row.retention_days || '—',
+      source: row.customer_file_source || row.data_source?.type || row.data_source?.sub_type || '—',
+      usage: usageById.get(String(row.id)) || []
+    };
+  });
 }
 
 export async function GET(request: Request) {
