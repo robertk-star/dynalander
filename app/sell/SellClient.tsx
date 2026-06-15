@@ -1,7 +1,7 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { FormEvent, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { dynlanderThemes } from '../admin/_data/dynlanderAdminData';
 
 function cleanCity(value: string | null) {
@@ -10,8 +10,8 @@ function cleanCity(value: string | null) {
 }
 
 export default function SellClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [submitted, setSubmitted] = useState(false);
 
   const themeId = searchParams.get('theme') || 'fast';
   const city = cleanCity(searchParams.get('city'));
@@ -25,7 +25,17 @@ export default function SellClient() {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitted(true);
+    const formData = new FormData(event.currentTarget);
+    const thankYouParams = new URLSearchParams({
+      theme: theme.id,
+      city,
+      campaign,
+      keyword,
+      device,
+      reason: String(formData.get('reason') || theme.id)
+    });
+
+    router.push(`/thank-you?${thankYouParams.toString()}`);
   }
 
   const headline = theme.headline.replace('{city}', city);
@@ -85,7 +95,7 @@ export default function SellClient() {
             </select>
           </label>
           <button className="full-button" type="submit">{theme.cta}</button>
-          {submitted ? <p className="admin-note">Demo lead captured. In production this will save to the database with the ad tracking values.</p> : null}
+          <p className="admin-note">After submit, visitors are sent to a thank-you page for clean tracking.</p>
         </form>
       </section>
 
