@@ -55,7 +55,7 @@ type ApiData = {
   checkedAt?: string;
 };
 
-function safeText(value: unknown, fallback = '—') {
+function safeText(value: unknown, fallback: string = '—'): string {
   if (value === undefined || value === null || value === '') return fallback;
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
   if (Array.isArray(value)) return value.map((item) => safeText(item, '')).filter(Boolean).join('; ') || fallback;
@@ -66,7 +66,7 @@ function safeText(value: unknown, fallback = '—') {
   return fallback;
 }
 
-function asArray(value: unknown) {
+function asArray(value: unknown): unknown[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
 }
