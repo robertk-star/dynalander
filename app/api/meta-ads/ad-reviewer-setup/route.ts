@@ -107,7 +107,7 @@ async function readAds(configured: string) {
   const filtered = await metaGet(`${configured}/ads`, { fields: deepFields, limit: '500', filtering: statusFilter });
   if (deep.response.ok || filtered.response.ok) {
     const rows = mergeAds(deep.response.ok ? (deep.json?.data || []) : [], filtered.response.ok ? (filtered.json?.data || []) : []);
-    return { response: { ok: true }, json: { data: rows }, creativeMode: 'deep_expanded', adDiscovery: { unfilteredCount: deep.json?.data?.length || 0, filteredCount: filtered.json?.data?.length || 0, mergedCount: rows.length, statusBreakdown: statusBreakdown(rows), filteredError: filtered.response.ok ? null : filtered.json?.error?.message || null, unfilteredError: deep.response.ok ? null : deep.json?.error?.message || null } };
+    return { response: { ok: true }, json: { data: rows }, creativeMode: 'deep_expanded', creativeWarning: null, adDiscovery: { unfilteredCount: deep.json?.data?.length || 0, filteredCount: filtered.json?.data?.length || 0, mergedCount: rows.length, statusBreakdown: statusBreakdown(rows), filteredError: filtered.response.ok ? null : filtered.json?.error?.message || null, unfilteredError: deep.response.ok ? null : deep.json?.error?.message || null } };
   }
   const safe = await metaGet(`${configured}/ads`, { fields: safeFields, limit: '500' });
   return { ...safe, creativeMode: safe.response.ok ? 'safe_fallback' : 'failed', creativeWarning: deep.json?.error?.message || filtered.json?.error?.message || null, adDiscovery: { unfilteredCount: safe.json?.data?.length || 0, filteredCount: 0, mergedCount: safe.json?.data?.length || 0, statusBreakdown: statusBreakdown(safe.json?.data || []) } };
