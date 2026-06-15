@@ -10,6 +10,9 @@ type Summary = { spend: string; results: string; impressions: string; clicks: st
 type Row = Summary & { id: string; name: string; campaignId?: string; campaignName?: string; adSetId?: string; adSetName?: string };
 type ApiData = { ok: boolean; source: string; error?: string; range?: { since: string; until: string; label: string }; summary: Summary | null; campaigns: Row[]; adSets: Row[]; ads: Row[]; checkedAt?: string; warnings?: Record<string, string | null> };
 
+type SavedDateDefault = { range: RangeKey; start: string; end: string };
+const DATE_DEFAULT_STORAGE_KEY = 'dynalander.dashboardSummary.defaultDateRange';
+
 function CampaignTable({ rows }: { rows: Row[] }) {
   return (
     <section style={cardStyle}>
@@ -49,6 +52,20 @@ function AdTable({ rows }: { rows: Row[] }) {
   );
 }
 
+function dateDefaultLabel(saved: SavedDateDefault | null) {
+  if (!saved) return 'No saved default yet.';
+  if (saved.range === 'custom') return saved.start && saved.end ? `Saved default: Custom date, ${saved.start} to ${saved.end}` : 'Saved default: Custom date';
+  const labels: Record<RangeKey, string> = {
+    today: 'Today',
+    yesterday: 'Yesterday',
+    last_7d: 'Last 7 days',
+    this_month: 'This month',
+    last_month: 'Last month',
+    custom: 'Custom date'
+  };
+  return `Saved default: ${labels[saved.range]}`;
+}
+
 export default function DashboardSummaryPanel() {
   const { platform } = useActivePlatform();
   const { selectedAccount } = useActiveAccount();
@@ -57,6 +74,8 @@ export default function DashboardSummaryPanel() {
   const [end, setEnd] = useState('');
   const [data, setData] = useState<ApiData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [savedDateDefault, setSavedDateDefault] = useState<SavedDateDefault | null>(null);
+  const [saveMessage, setSaveMessage] = useState('');
 
   async function loadData() {
     setLoading(true);
@@ -74,6 +93,44 @@ export default function DashboardSummaryPanel() {
       setLoading(false);
     }
   }
+
+  function saveDefaultDateRange() {
+    if (range === 'custom' && (!start || !end)) {
+      setSaveMessage('Choose both a start and end date before saving custom as the default.');
+      return;
+    }
+
+    const nextDefault = { range, start: range === 'custom' ? start : '', end: range === 'custom' ? end : '' };
+    localStorage.setItem(DATE_DEFAULT_STORAGE_KEY, JSON.stringify(nextDefault));
+    setSavedDateDefault(nextDefault);
+    setSaveMessage('Default date range saved.');
+  }
+
+  function clearDefaultDateRange() {
+    localStorage.removeItem(DATE_DEFAULT_STORAGE_KEY);
+    const resetDefault = { range: 'last_7d' as RangeKey, start: '', end: '' };
+    setSavedDateDefault(null);
+    setRange(resetDefault.range);
+    setStart(resetDefault.start);
+    setEnd(resetDefault.end);
+    setSaveMessage('Default cleared. Using Last 7 days.');
+  }
+
+  useEffect(() => {
+    const stored = localStorage.getItem(DATE_DEFAULT_STORAGE_KEY);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as SavedDateDefault;
+      if (['today', 'yesterday', 'last_7d', 'this_month', 'last_month', 'custom'].includes(parsed.range)) {
+        setSavedDateDefault(parsed);
+        setRange(parsed.range);
+        setStart(parsed.start || '');
+        setEnd(parsed.end || '');
+      }
+    } catch {
+      localStorage.removeItem(DATE_DEFAULT_STORAGE_KEY);
+    }
+  }, []);
 
   useEffect(() => { if (platform === 'meta_ads') loadData(); }, [platform, selectedAccount.customerId, range]);
 
@@ -104,7 +161,12 @@ export default function DashboardSummaryPanel() {
           <label style={labelStyle}>Date range<select style={inputStyle} value={range} onChange={(event) => setRange(event.target.value as RangeKey)}><option value="today">Today</option><option value="yesterday">Yesterday</option><option value="last_7d">Last 7 days</option><option value="this_month">This month</option><option value="last_month">Last month</option><option value="custom">Custom date</option></select></label>
           {range === 'custom' ? <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label style={labelStyle}>Start<input style={inputStyle} type="date" value={start} onChange={(event) => setStart(event.target.value)} /></label><label style={labelStyle}>End<input style={inputStyle} type="date" value={end} onChange={(event) => setEnd(event.target.value)} /></label></div> : <div><strong>{data?.range?.label || 'Last 7 days'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{data?.range ? `${data.range.since} to ${data.range.until}` : 'Waiting for data.'}</p></div>}
         </div>
-        {range === 'custom' ? <button type="button" onClick={loadData} style={{ ...blueButtonStyle, marginTop: 12 }}>Apply custom date</button> : null}
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginTop: 12 }}>
+          {range === 'custom' ? <button type="button" onClick={loadData} style={blueButtonStyle}>Apply custom date</button> : null}
+          <button type="button" onClick={saveDefaultDateRange} style={blueButtonStyle}>Save this date range as default</button>
+          <button type="button" onClick={clearDefaultDateRange} style={{ ...blueButtonStyle, background: '#334155' }}>Clear saved default</button>
+        </div>
+        <p style={{ color: '#64748b', fontWeight: 800 }}>{saveMessage || dateDefaultLabel(savedDateDefault)}</p>
       </section>
 
       <div style={gridStyle}>
