@@ -5,6 +5,7 @@ import { blueButtonStyle, cardStyle, gridStyle, inputStyle, labelStyle, tableSty
 import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
 import SavedReviewBox from './SavedReviewBox';
+import ChangeChecklistBox from './ChangeChecklistBox';
 
 type RangeKey = 'last_7d' | 'last_30d' | 'this_month' | 'last_month';
 
@@ -189,6 +190,7 @@ export default function AiAccountReviewPanel() {
       </section>
 
       <SavedReviewBox data={data} accountKey={selectedAccount.customerId} range={range} />
+      <ChangeChecklistBox review={review} accountKey={selectedAccount.customerId} />
 
       {data?.dataSummary ? (
         <div style={gridStyle}>
