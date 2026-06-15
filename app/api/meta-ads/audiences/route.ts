@@ -45,8 +45,8 @@ function audienceStatus(row: any) {
 }
 
 function formatSize(row: any) {
-  const size = row.approximate_count ?? row.approximateCount ?? row.size;
-  if (size === undefined || size === null || size === '') return '—';
+  const size = row.size;
+  if (size === undefined || size === null || size === '') return 'Not returned by Meta';
   return Number(size || 0).toLocaleString();
 }
 
@@ -103,8 +103,8 @@ export async function GET(request: Request) {
   }
 
   const adSetFields = 'id,name,status,effective_status,campaign_id,campaign{name},targeting';
-  const audienceFields = 'id,name,subtype,description,approximate_count,delivery_status,operation_status,permission_for_actions,customer_file_source,data_source,retention_days,creation_time,update_time';
-  const savedAudienceFields = 'id,name,subtype,description,approximate_count,delivery_status,operation_status,permission_for_actions,creation_time,update_time';
+  const audienceFields = 'id,name,subtype,description,delivery_status,operation_status,permission_for_actions,customer_file_source,data_source,retention_days,creation_time,update_time';
+  const savedAudienceFields = 'id,name,subtype,description,delivery_status,operation_status,permission_for_actions,creation_time,update_time';
 
   const [customAudienceResult, savedAudienceResult, adSetResult] = await Promise.all([
     metaGet(`${configured}/customaudiences`, { fields: audienceFields, limit: '500' }),
