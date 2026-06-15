@@ -8,32 +8,32 @@ import { useActivePlatform } from '../_components/useActivePlatform';
 type RangeKey = 'last_7d' | 'last_30d' | 'this_month' | 'last_month';
 
 type ReviewItem = {
-  name?: string;
-  category?: string;
-  issue?: string;
-  evidence?: string;
-  whyItMatters?: string;
-  recommendation?: string;
-  suggestedNextStep?: string;
-  riskLevel?: string;
-  expectedImpact?: string;
-  priority?: string;
-  priorityScore?: number | string;
+  name?: unknown;
+  category?: unknown;
+  issue?: unknown;
+  evidence?: unknown;
+  whyItMatters?: unknown;
+  recommendation?: unknown;
+  suggestedNextStep?: unknown;
+  riskLevel?: unknown;
+  expectedImpact?: unknown;
+  priority?: unknown;
+  priorityScore?: unknown;
 };
 
 type Review = {
-  overallGrade?: string;
-  summary?: string;
-  topProblems?: string[];
-  topRecommendedChanges?: string[];
-  budgetReview?: { status?: string; findings?: string[] };
-  campaignReview?: ReviewItem[];
-  adSetReview?: ReviewItem[];
-  adReview?: ReviewItem[];
-  audienceReview?: { status?: string; findings?: string[] };
-  creativeReview?: { status?: string; findings?: string[] };
-  evidenceBasedRecommendations?: ReviewItem[];
-  whatToFixFirst?: string[];
+  overallGrade?: unknown;
+  summary?: unknown;
+  topProblems?: unknown;
+  topRecommendedChanges?: unknown;
+  budgetReview?: { status?: unknown; findings?: unknown };
+  campaignReview?: unknown;
+  adSetReview?: unknown;
+  adReview?: unknown;
+  audienceReview?: { status?: unknown; findings?: unknown };
+  creativeReview?: { status?: unknown; findings?: unknown };
+  evidenceBasedRecommendations?: unknown;
+  whatToFixFirst?: unknown;
 };
 
 type ApiData = {
@@ -55,15 +55,37 @@ type ApiData = {
   checkedAt?: string;
 };
 
-function BulletList({ items }: { items?: string[] }) {
-  if (!items?.length) return <p style={{ color: '#64748b' }}>No findings returned.</p>;
-  return <ul>{items.map((item, index) => <li key={`${item}-${index}`} style={{ marginBottom: 8 }}>{item}</li>)}</ul>;
+function safeText(value: unknown, fallback = '—') {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map((item) => safeText(item, '')).filter(Boolean).join('; ') || fallback;
+  if (typeof value === 'object') {
+    const objectValue = value as Record<string, unknown>;
+    return safeText(objectValue.text || objectValue.value || objectValue.finding || objectValue.issue || objectValue.recommendation || JSON.stringify(objectValue), fallback);
+  }
+  return fallback;
 }
 
-function PriorityBadge({ value }: { value?: string | number }) {
-  const text = value === undefined || value === null || value === '' ? '—' : String(value);
-  const high = text.toLowerCase().includes('high') || Number(text) >= 8;
-  const medium = text.toLowerCase().includes('medium') || (Number(text) >= 5 && Number(text) < 8);
+function asArray(value: unknown) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function asReviewItems(value: unknown): ReviewItem[] {
+  return asArray(value).map((item) => (typeof item === 'object' && item !== null ? item as ReviewItem : { issue: item }));
+}
+
+function BulletList({ items }: { items?: unknown }) {
+  const rows = asArray(items);
+  if (!rows.length) return <p style={{ color: '#64748b' }}>No findings returned.</p>;
+  return <ul>{rows.map((item, index) => <li key={`bullet-${index}`} style={{ marginBottom: 8 }}>{safeText(item)}</li>)}</ul>;
+}
+
+function PriorityBadge({ value }: { value?: unknown }) {
+  const text = safeText(value);
+  const numberValue = Number(text);
+  const high = text.toLowerCase().includes('high') || numberValue >= 8;
+  const medium = text.toLowerCase().includes('medium') || (numberValue >= 5 && numberValue < 8);
   const style = high
     ? { background: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' }
     : medium
@@ -72,7 +94,8 @@ function PriorityBadge({ value }: { value?: string | number }) {
   return <span style={{ ...style, display: 'inline-block', borderRadius: 999, padding: '6px 10px', fontWeight: 900 }}>{text}</span>;
 }
 
-function ReviewTable({ title, rows }: { title: string; rows?: ReviewItem[] }) {
+function ReviewTable({ title, rows }: { title: string; rows?: unknown }) {
+  const reviewRows = asReviewItems(rows);
   return (
     <section style={cardStyle}>
       <h2 style={{ marginTop: 0 }}>{title}</h2>
@@ -92,23 +115,23 @@ function ReviewTable({ title, rows }: { title: string; rows?: ReviewItem[] }) {
           </tr>
         </thead>
         <tbody>
-          {(rows || []).map((row, index) => (
+          {reviewRows.map((row, index) => (
             <tr key={`${title}-${index}`}>
-              <td style={thTdStyle}>{row.name || '—'}</td>
-              <td style={thTdStyle}>{row.category || '—'}</td>
-              <td style={thTdStyle}>{row.issue || '—'}</td>
-              <td style={thTdStyle}>{row.evidence || '—'}</td>
-              <td style={thTdStyle}>{row.whyItMatters || '—'}</td>
-              <td style={thTdStyle}>{row.recommendation || '—'}</td>
-              <td style={thTdStyle}>{row.suggestedNextStep || '—'}</td>
-              <td style={thTdStyle}>{row.riskLevel || '—'}</td>
-              <td style={thTdStyle}>{row.expectedImpact || '—'}</td>
+              <td style={thTdStyle}>{safeText(row.name)}</td>
+              <td style={thTdStyle}>{safeText(row.category)}</td>
+              <td style={thTdStyle}>{safeText(row.issue)}</td>
+              <td style={thTdStyle}>{safeText(row.evidence)}</td>
+              <td style={thTdStyle}>{safeText(row.whyItMatters)}</td>
+              <td style={thTdStyle}>{safeText(row.recommendation)}</td>
+              <td style={thTdStyle}>{safeText(row.suggestedNextStep)}</td>
+              <td style={thTdStyle}>{safeText(row.riskLevel)}</td>
+              <td style={thTdStyle}>{safeText(row.expectedImpact)}</td>
               <td style={thTdStyle}><PriorityBadge value={row.priorityScore || row.priority} /></td>
             </tr>
           ))}
         </tbody>
       </table>
-      {!rows?.length ? <p style={{ color: '#64748b' }}>No review rows returned.</p> : null}
+      {!reviewRows.length ? <p style={{ color: '#64748b' }}>No review rows returned.</p> : null}
     </section>
   );
 }
@@ -183,8 +206,8 @@ export default function AiAccountReviewPanel() {
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Overall Review</h2>
         <div style={{ display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ background: '#dbeafe', border: '1px solid #2563eb', color: '#1d4ed8', borderRadius: 16, padding: '16px 22px', fontWeight: 900, fontSize: 34 }}>{review?.overallGrade || '—'}</div>
-          <p style={{ color: '#334155', lineHeight: 1.6, maxWidth: 900 }}>{review?.summary || 'Run the review to see AI findings.'}</p>
+          <div style={{ background: '#dbeafe', border: '1px solid #2563eb', color: '#1d4ed8', borderRadius: 16, padding: '16px 22px', fontWeight: 900, fontSize: 34 }}>{safeText(review?.overallGrade)}</div>
+          <p style={{ color: '#334155', lineHeight: 1.6, maxWidth: 900 }}>{safeText(review?.summary, 'Run the review to see AI findings.')}</p>
         </div>
       </section>
 
@@ -197,9 +220,9 @@ export default function AiAccountReviewPanel() {
       <ReviewTable title="Evidence-Based Recommendations" rows={review?.evidenceBasedRecommendations} />
 
       <div style={gridStyle}>
-        <section style={cardStyle}><h2 style={{ marginTop: 0 }}>Budget Review</h2><strong>{review?.budgetReview?.status || '—'}</strong><BulletList items={review?.budgetReview?.findings} /></section>
-        <section style={cardStyle}><h2 style={{ marginTop: 0 }}>Audience Review</h2><strong>{review?.audienceReview?.status || '—'}</strong><BulletList items={review?.audienceReview?.findings} /></section>
-        <section style={cardStyle}><h2 style={{ marginTop: 0 }}>Creative Review</h2><strong>{review?.creativeReview?.status || '—'}</strong><BulletList items={review?.creativeReview?.findings} /></section>
+        <section style={cardStyle}><h2 style={{ marginTop: 0 }}>Budget Review</h2><strong>{safeText(review?.budgetReview?.status)}</strong><BulletList items={review?.budgetReview?.findings} /></section>
+        <section style={cardStyle}><h2 style={{ marginTop: 0 }}>Audience Review</h2><strong>{safeText(review?.audienceReview?.status)}</strong><BulletList items={review?.audienceReview?.findings} /></section>
+        <section style={cardStyle}><h2 style={{ marginTop: 0 }}>Creative Review</h2><strong>{safeText(review?.creativeReview?.status)}</strong><BulletList items={review?.creativeReview?.findings} /></section>
       </div>
 
       <ReviewTable title="Campaign Review" rows={review?.campaignReview} />
