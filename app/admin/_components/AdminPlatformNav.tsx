@@ -57,6 +57,7 @@ export default function AdminPlatformNav() {
       <nav style={navStyle}>
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/dashboard-summary')} href="/admin/dashboard-summary">Dashboard Summary</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/ad-reviewer')} href="/admin/ad-reviewer">Ad Reviewer</a> : null}
+        {isMeta ? <a style={activeNavStyle(pathname, '/admin/audiences')} href="/admin/audiences">Audiences</a> : null}
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/google-ads')} href="/admin/google-ads">Google Ads Intelligence</a> : null}
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/live-query-preview')} href="/admin/live-query-preview">Live Query Preview</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/meta-ads-connection')} href="/admin/meta-ads-connection">Meta Ads Connection</a> : null}
