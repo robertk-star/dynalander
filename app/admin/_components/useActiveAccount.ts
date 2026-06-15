@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { googleAdsAccounts } from '../_data/dynlanderAdminData';
-import { activeAccountStorageKey, defaultMetaAccount, getAccountById, type AdminAccountOption } from './AdminAccountSelector';
+import { activeAccountStorageKey, defaultGoogleLiveAccount, defaultMetaAccount, getAccountById, type AdminAccountOption } from './AdminAccountSelector';
 import { useActivePlatform } from './useActivePlatform';
 import { useMetaDataMode } from './useMetaDataMode';
 
@@ -10,9 +10,11 @@ export function useActiveAccount() {
   const { platform } = useActivePlatform();
   const { mode } = useMetaDataMode();
   const isMetaLive = platform === 'meta_ads' && mode === 'live';
+  const isGoogle = platform === 'google_ads';
   const [accountId, setAccountId] = useState(googleAdsAccounts[0].id);
   const [metaAccount, setMetaAccount] = useState<AdminAccountOption>(defaultMetaAccount);
-  const accountOptions = isMetaLive ? [metaAccount] : (googleAdsAccounts as AdminAccountOption[]);
+  const [googleLiveAccount, setGoogleLiveAccount] = useState<AdminAccountOption>(defaultGoogleLiveAccount);
+  const accountOptions = isMetaLive ? [metaAccount] : isGoogle ? [googleLiveAccount] : (googleAdsAccounts as AdminAccountOption[]);
 
   useEffect(() => {
     async function loadMetaAccount() {
@@ -33,8 +35,30 @@ export function useActiveAccount() {
       }
     }
 
+    async function loadGoogleAccount() {
+      try {
+        const response = await fetch('/api/google-ads/status', { cache: 'no-store' });
+        const result = await response.json();
+        const liveId = result?.customerId || 'GOOGLE_ADS_CUSTOMER_ID';
+        const liveName = result?.account?.name || `Google Ads ${liveId}`;
+        const market = result?.loginCustomerId ? `Google Ads · Manager ${result.loginCustomerId}` : 'Google Ads · Direct account';
+        const nextAccount = { id: 'google-connected-account', name: liveName, customerId: liveId, market, source: 'google_live' as const };
+        setGoogleLiveAccount(nextAccount);
+        setAccountId(nextAccount.id);
+        return;
+      } catch {
+        setGoogleLiveAccount(defaultGoogleLiveAccount);
+        setAccountId(defaultGoogleLiveAccount.id);
+      }
+    }
+
     if (isMetaLive) {
       loadMetaAccount();
+      return;
+    }
+
+    if (isGoogle) {
+      loadGoogleAccount();
       return;
     }
 
@@ -54,7 +78,7 @@ export function useActiveAccount() {
 
     window.addEventListener('dynlander-active-account-change', handleAccountChange);
     return () => window.removeEventListener('dynlander-active-account-change', handleAccountChange);
-  }, [isMetaLive]);
+  }, [isMetaLive, isGoogle]);
 
   return {
     accountId,
