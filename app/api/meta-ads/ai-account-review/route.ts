@@ -4,6 +4,8 @@ export const dynamic = 'force-dynamic';
 
 type RangeKey = 'last_7d' | 'last_30d' | 'this_month' | 'last_month';
 
+type AiReviewResult = { aiConfigured: boolean; aiError: string | null; review: any };
+
 function normalizeAdAccountId(value: string | null) {
   if (!value) return null;
   return value.startsWith('act_') ? value : `act_${value}`;
@@ -94,6 +96,20 @@ function fallbackReview(payload: any, reason: string) {
     .slice(0, 5)
     .map((row: any) => `${row.ad_name || row.ad_id} spent $${Number(row.spend_number || 0).toFixed(2)} with 0 leads.`);
 
+  const evidenceBasedRecommendations = spendNoLeads.map((finding: string) => ({
+    name: 'Spend with no leads',
+    category: 'Performance',
+    issue: finding,
+    evidence: finding,
+    whyItMatters: 'Spend without leads can raise cost per lead and waste budget.',
+    recommendation: 'Review the ad, audience, and offer before increasing budget.',
+    suggestedNextStep: 'Check the ad creative and ad set targeting first.',
+    riskLevel: 'Medium',
+    expectedImpact: 'May reduce wasted spend.',
+    priority: spendNoLeads.length ? 'High' : 'Low',
+    priorityScore: spendNoLeads.length ? 8 : 3
+  }));
+
   return {
     overallGrade: spendNoLeads.length ? 'C' : 'B',
     summary: `Limited review only. ${reason}`,
@@ -105,18 +121,19 @@ function fallbackReview(payload: any, reason: string) {
     adReview: [],
     audienceReview: { status: 'Needs review', findings: ['Full audience review requires AI output.'] },
     creativeReview: { status: 'Needs review', findings: ['Full creative review requires AI output.'] },
+    evidenceBasedRecommendations,
     whatToFixFirst: spendNoLeads.length ? ['Review spend with no leads.'] : ['No urgent fallback issue found.']
   };
 }
 
 function buildPrompt(payload: any) {
-  return `Review this Meta Ads account data. Return JSON only. Find setup, budget, targeting, creative, and performance issues that could hurt lead volume or cost per lead. Use evidence from the data only. Do not suggest automatic account changes. JSON keys: overallGrade, summary, topProblems, topRecommendedChanges, budgetReview, campaignReview, adSetReview, adReview, audienceReview, creativeReview, whatToFixFirst. Data: ${JSON.stringify(payload).slice(0, 45000)}`;
+  return `Review this Meta Ads lead-generation account. Return JSON only. Use evidence from the data. Each review row should include name, category, issue, evidence, whyItMatters, recommendation, suggestedNextStep, riskLevel, expectedImpact, priority, and priorityScore from 1 to 10. Include an evidenceBasedRecommendations array with the highest priority findings. JSON keys: overallGrade, summary, topProblems, topRecommendedChanges, budgetReview, campaignReview, adSetReview, adReview, audienceReview, creativeReview, evidenceBasedRecommendations, whatToFixFirst. Data: ${JSON.stringify(payload).slice(0, 45000)}`;
 }
 
-async function runAiReview(payload: any) {
+async function runAiReview(payload: any): Promise<AiReviewResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  if (!apiKey) return { aiConfigured: false, review: fallbackReview(payload, 'OPENAI_API_KEY is not configured.') };
+  if (!apiKey) return { aiConfigured: false, aiError: null, review: fallbackReview(payload, 'OPENAI_API_KEY is not configured.') };
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -137,7 +154,7 @@ async function runAiReview(payload: any) {
 
   const content = json?.choices?.[0]?.message?.content || '{}';
   try {
-    return { aiConfigured: true, review: JSON.parse(content) };
+    return { aiConfigured: true, aiError: null, review: JSON.parse(content) };
   } catch {
     return { aiConfigured: true, aiError: 'AI response was not valid JSON.', review: fallbackReview(payload, 'AI response was not valid JSON.') };
   }
@@ -184,11 +201,11 @@ export async function GET(request: Request) {
 
   return Response.json({
     ok: true,
-    source: 'meta_ai_account_review_phase_1',
+    source: 'meta_ai_account_review_phase_2',
     adAccountId: configured,
     range,
     aiConfigured: ai.aiConfigured,
-    aiError: ai.aiError || null,
+    aiError: ai.aiError,
     review: ai.review,
     dataSummary: {
       campaignCount: payload.campaigns.length,
