@@ -6,7 +6,7 @@ import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
 
 type RangeKey = 'today' | 'yesterday' | 'last_7d' | 'this_month' | 'last_month' | 'custom';
-type Summary = { spend: string; impressions: string; clicks: string; ctr: string; cpc: string; cpm: string };
+type Summary = { spend: string; results: string; impressions: string; clicks: string; ctr: string; cpc: string; cpm: string };
 type Row = Summary & { id: string; name: string; campaignId?: string; campaignName?: string; adSetId?: string; adSetName?: string };
 type ApiData = { ok: boolean; source: string; error?: string; range?: { since: string; until: string; label: string }; summary: Summary | null; campaigns: Row[]; adSets: Row[]; ads: Row[]; checkedAt?: string; warnings?: Record<string, string | null> };
 
@@ -15,8 +15,8 @@ function CampaignTable({ rows }: { rows: Row[] }) {
     <section style={cardStyle}>
       <h2 style={{ marginTop: 0 }}>Campaign summary</h2>
       <table style={tableStyle}>
-        <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Campaign ID</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Impressions</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPC</th><th style={thTdStyle}>CPM</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={`campaign-${row.id}`}><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.id}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.impressions}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.cpc}</td><td style={thTdStyle}>{row.cpm}</td></tr>)}</tbody>
+        <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Campaign ID</th><th style={thTdStyle}>Results</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Impressions</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPC</th><th style={thTdStyle}>CPM</th></tr></thead>
+        <tbody>{rows.map((row) => <tr key={`campaign-${row.id}`}><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.id}</td><td style={thTdStyle}>{row.results}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.impressions}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.cpc}</td><td style={thTdStyle}>{row.cpm}</td></tr>)}</tbody>
       </table>
       {rows.length === 0 ? <p style={{ color: '#64748b' }}>No campaign rows returned for the selected date range.</p> : null}
     </section>
@@ -28,8 +28,8 @@ function AdSetTable({ rows }: { rows: Row[] }) {
     <section style={cardStyle}>
       <h2 style={{ marginTop: 0 }}>Ad set summary</h2>
       <table style={tableStyle}>
-        <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Ad set</th><th style={thTdStyle}>Ad set ID</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Impressions</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPC</th><th style={thTdStyle}>CPM</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={`adset-${row.id}`}><td style={thTdStyle}>{row.campaignName || '—'}</td><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.id}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.impressions}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.cpc}</td><td style={thTdStyle}>{row.cpm}</td></tr>)}</tbody>
+        <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Ad set</th><th style={thTdStyle}>Ad set ID</th><th style={thTdStyle}>Results</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Impressions</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPC</th><th style={thTdStyle}>CPM</th></tr></thead>
+        <tbody>{rows.map((row) => <tr key={`adset-${row.id}`}><td style={thTdStyle}>{row.campaignName || '—'}</td><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.id}</td><td style={thTdStyle}>{row.results}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.impressions}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.cpc}</td><td style={thTdStyle}>{row.cpm}</td></tr>)}</tbody>
       </table>
       {rows.length === 0 ? <p style={{ color: '#64748b' }}>No ad set rows returned for the selected date range.</p> : null}
     </section>
@@ -41,8 +41,8 @@ function AdTable({ rows }: { rows: Row[] }) {
     <section style={cardStyle}>
       <h2 style={{ marginTop: 0 }}>Ad summary</h2>
       <table style={tableStyle}>
-        <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Ad set</th><th style={thTdStyle}>Ad</th><th style={thTdStyle}>Ad ID</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Impressions</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPC</th><th style={thTdStyle}>CPM</th></tr></thead>
-        <tbody>{rows.map((row) => <tr key={`ad-${row.id}`}><td style={thTdStyle}>{row.campaignName || '—'}</td><td style={thTdStyle}>{row.adSetName || '—'}</td><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.id}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.impressions}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.cpc}</td><td style={thTdStyle}>{row.cpm}</td></tr>)}</tbody>
+        <thead><tr><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Ad set</th><th style={thTdStyle}>Ad</th><th style={thTdStyle}>Ad ID</th><th style={thTdStyle}>Results</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Impressions</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPC</th><th style={thTdStyle}>CPM</th></tr></thead>
+        <tbody>{rows.map((row) => <tr key={`ad-${row.id}`}><td style={thTdStyle}>{row.campaignName || '—'}</td><td style={thTdStyle}>{row.adSetName || '—'}</td><td style={thTdStyle}>{row.name}</td><td style={thTdStyle}>{row.id}</td><td style={thTdStyle}>{row.results}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.impressions}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.cpc}</td><td style={thTdStyle}>{row.cpm}</td></tr>)}</tbody>
       </table>
       {rows.length === 0 ? <p style={{ color: '#64748b' }}>No ad rows returned for the selected date range.</p> : null}
     </section>
@@ -108,6 +108,7 @@ export default function DashboardSummaryPanel() {
       </section>
 
       <div style={gridStyle}>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Results</div><strong style={{ fontSize: 34 }}>{summary?.results || '—'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Spend</div><strong style={{ fontSize: 34 }}>{summary?.spend || '—'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Impressions</div><strong style={{ fontSize: 34 }}>{summary?.impressions || '—'}</strong></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Clicks</div><strong style={{ fontSize: 34 }}>{summary?.clicks || '—'}</strong></div>
