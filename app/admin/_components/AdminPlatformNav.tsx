@@ -41,15 +41,15 @@ export default function AdminPlatformNav() {
         {isMeta ? <a style={navLinkStyle} href="/admin/dashboard-summary">Dashboard Summary</a> : null}
         {isMeta ? <a style={navLinkStyle} href="/admin/ad-reviewer">Ad Reviewer</a> : null}
         {isMeta ? <a style={navLinkStyle} href="/admin/meta-ads">Meta Ads Intelligence</a> : <a style={navLinkStyle} href="/admin/google-ads">Google Ads Intelligence</a>}
-        {isMeta ? <a style={navLinkStyle} href="/admin/creative-review">Creative Review</a> : <a style={navLinkStyle} href="/admin/live-query-preview">Live Query Preview</a>}
+        {!isMeta ? <a style={navLinkStyle} href="/admin/live-query-preview">Live Query Preview</a> : null}
         {isMeta ? <a style={navLinkStyle} href="/admin/meta-ads-connection">Meta Ads Connection</a> : null}
         {isMeta ? <a style={navLinkStyle} href="/admin/meta-audit">Meta Safety Audit</a> : null}
-        <a style={navLinkStyle} href="/admin/recommendations">Recommendations</a>
+        {!isMeta ? <a style={navLinkStyle} href="/admin/recommendations">Recommendations</a> : null}
         <a style={navLinkStyle} href="/admin/snapshot-preview">Snapshot Preview</a>
         <a style={navLinkStyle} href="/admin/change-history">Change History</a>
-        <a style={navLinkStyle} href="/admin/ad-review">Ad Review</a>
-        <a style={navLinkStyle} href="/admin/themes">Theme Editor</a>
-        <a style={navLinkStyle} href="/admin/url-builder">URL Builder</a>
+        {!isMeta ? <a style={navLinkStyle} href="/admin/ad-review">Ad Review</a> : null}
+        {!isMeta ? <a style={navLinkStyle} href="/admin/themes">Theme Editor</a> : null}
+        {!isMeta ? <a style={navLinkStyle} href="/admin/url-builder">URL Builder</a> : null}
         <a style={navLinkStyle} href="/admin/leads">Leads</a>
         {!isMeta ? <a style={navLinkStyle} href="/sell?theme=repairs&city=Plano">View Landing Page</a> : null}
         <a style={{ ...navLinkStyle, marginTop: 24 }} href="/admin/connection-settings">Connection Settings</a>
