@@ -58,23 +58,26 @@ function numberText(value: string | number | undefined) {
 
 function rowResults(row: any) {
   const actions = Array.isArray(row.actions) ? row.actions : [];
-  const preferred = [
+  const resultActionTypes = [
     'lead',
+    'leadgen_grouped',
+    'omni_lead',
+    'onsite_conversion.lead',
     'onsite_conversion.lead_grouped',
     'offsite_conversion.fb_pixel_lead',
     'onsite_conversion.messaging_conversation_started_7d',
     'complete_registration',
+    'omni_complete_registration',
+    'onsite_conversion.complete_registration',
     'offsite_conversion.fb_pixel_complete_registration',
     'purchase',
+    'omni_purchase',
     'offsite_conversion.fb_pixel_purchase'
   ];
 
-  const preferredTotal = actions
-    .filter((action: any) => preferred.includes(action.action_type))
+  return actions
+    .filter((action: any) => resultActionTypes.includes(action.action_type))
     .reduce((sum: number, action: any) => sum + Number(action.value || 0), 0);
-
-  if (preferredTotal > 0) return preferredTotal;
-  return actions.reduce((sum: number, action: any) => sum + Number(action.value || 0), 0);
 }
 
 function summarize(rows: any[]) {
