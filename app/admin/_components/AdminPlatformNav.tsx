@@ -62,7 +62,7 @@ export default function AdminPlatformNav() {
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/meta-ads-connection')} href="/admin/meta-ads-connection">Meta Ads Connection</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/meta-audit')} href="/admin/meta-audit">Meta Safety Audit</a> : null}
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/recommendations')} href="/admin/recommendations">Recommendations</a> : null}
-        <a style={activeNavStyle(pathname, '/admin/snapshot-preview')} href="/admin/snapshot-preview">Snapshot Preview</a>
+        {!isMeta ? <a style={activeNavStyle(pathname, '/admin/snapshot-preview')} href="/admin/snapshot-preview">Snapshot Preview</a> : null}
         <a style={activeNavStyle(pathname, '/admin/change-history')} href="/admin/change-history">Change History</a>
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/ad-review')} href="/admin/ad-review">Ad Review</a> : null}
         {!isMeta ? <a style={activeNavStyle(pathname, '/admin/themes')} href="/admin/themes">Theme Editor</a> : null}
