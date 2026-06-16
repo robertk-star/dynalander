@@ -4,32 +4,65 @@ export const dynamic = 'force-dynamic';
 
 type RangeKey = 'today' | 'yesterday' | 'last_7d' | 'this_month' | 'last_month' | 'custom';
 
+const DASHBOARD_TIME_ZONE = 'America/Chicago';
+
 function normalizeAdAccountId(value: string | null) {
   if (!value) return null;
   return value.startsWith('act_') ? value : `act_${value}`;
 }
 
-function toDateString(date: Date) {
-  return date.toISOString().slice(0, 10);
+function chicagoDateParts(date: Date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: DASHBOARD_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+
+  return {
+    year: Number(parts.find((part) => part.type === 'year')?.value || '0'),
+    month: Number(parts.find((part) => part.type === 'month')?.value || '0'),
+    day: Number(parts.find((part) => part.type === 'day')?.value || '0')
+  };
+}
+
+function dateStringFromParts(year: number, month: number, day: number) {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function shiftDateParts(parts: { year: number; month: number; day: number }, days: number) {
+  const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day + days, 12, 0, 0));
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+}
+
+function monthStart(parts: { year: number; month: number; day: number }, offsetMonths = 0) {
+  const date = new Date(Date.UTC(parts.year, parts.month - 1 + offsetMonths, 1, 12, 0, 0));
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+}
+
+function monthEnd(parts: { year: number; month: number; day: number }, offsetMonths = 0) {
+  const date = new Date(Date.UTC(parts.year, parts.month + offsetMonths, 0, 12, 0, 0));
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
+}
+
+function toDateString(parts: { year: number; month: number; day: number }) {
+  return dateStringFromParts(parts.year, parts.month, parts.day);
 }
 
 function getRange(range: RangeKey, customStart: string | null, customEnd: string | null) {
-  const now = new Date();
-  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const yesterday = new Date(today);
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-  const startOfThisMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
-  const startOfLastMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
-  const endOfLastMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 0));
-  const last7 = new Date(today);
-  last7.setUTCDate(last7.getUTCDate() - 6);
+  const today = chicagoDateParts(new Date());
+  const yesterday = shiftDateParts(today, -1);
+  const startOfThisMonth = monthStart(today, 0);
+  const startOfLastMonth = monthStart(today, -1);
+  const endOfLastMonth = monthEnd(today, -1);
+  const last7 = shiftDateParts(today, -6);
 
-  if (range === 'today') return { since: toDateString(today), until: toDateString(today), label: 'Today' };
-  if (range === 'yesterday') return { since: toDateString(yesterday), until: toDateString(yesterday), label: 'Yesterday' };
-  if (range === 'this_month') return { since: toDateString(startOfThisMonth), until: toDateString(today), label: 'This month' };
-  if (range === 'last_month') return { since: toDateString(startOfLastMonth), until: toDateString(endOfLastMonth), label: 'Last month' };
-  if (range === 'custom' && customStart && customEnd) return { since: customStart, until: customEnd, label: 'Custom date' };
-  return { since: toDateString(last7), until: toDateString(today), label: 'Last 7 days' };
+  if (range === 'today') return { since: toDateString(today), until: toDateString(today), label: 'Today', timeZone: DASHBOARD_TIME_ZONE };
+  if (range === 'yesterday') return { since: toDateString(yesterday), until: toDateString(yesterday), label: 'Yesterday', timeZone: DASHBOARD_TIME_ZONE };
+  if (range === 'this_month') return { since: toDateString(startOfThisMonth), until: toDateString(today), label: 'This month', timeZone: DASHBOARD_TIME_ZONE };
+  if (range === 'last_month') return { since: toDateString(startOfLastMonth), until: toDateString(endOfLastMonth), label: 'Last month', timeZone: DASHBOARD_TIME_ZONE };
+  if (range === 'custom' && customStart && customEnd) return { since: customStart, until: customEnd, label: 'Custom date', timeZone: DASHBOARD_TIME_ZONE };
+  return { since: toDateString(last7), until: toDateString(today), label: 'Last 7 days', timeZone: DASHBOARD_TIME_ZONE };
 }
 
 async function metaGet(path: string, params: Record<string, string>) {
