@@ -74,15 +74,33 @@ export async function POST(request: Request) {
   if (!apiKey) return Response.json({ ok: true, aiConfigured: false, answer: fallbackAnswer(question) });
 
   const setupContext = await getLiveSetupContext(accountKey || null);
-  const prompt = `You are helping review a Meta Ads account inside DynLander. Answer the user's question using live setup fields and performance data. Be direct, practical, and read-only. Do not claim you changed Meta Ads. If the user asks about setup differences, compare campaign objective, ad set optimization, budgets, targeting, placements, creative, CTA, destination URL, and status before discussing performance metrics. Prioritize active campaigns, active ad sets, and active ads over paused history.
+  const prompt = `You are answering questions about a Meta Ads account inside DynLander.
+
+STRICT RULES:
+1. Do not guess, infer, assume, or improvise missing setup information.
+2. Only state setup details that appear in the live setup context JSON.
+3. If a setup field is not present, say "Not returned by Meta".
+4. If you compare two campaigns, ad sets, or ads, compare only exact returned fields: objective, status, effective_status, budget, bid_strategy, billing_event, optimization_goal, destination_type, promoted_object, targeting, creative fields, CTA, destination URL, and report metrics.
+5. If the user asks about "setup", answer setup first and performance second.
+6. Do not say "likely", "probably", "may be", or "appears" unless you clearly label it as an inference.
+7. Do not invent audience names, placements, budgets, URLs, CTAs, objectives, or optimization settings.
+8. If the data is insufficient, say exactly what data is missing.
+9. Be read-only. Never claim you changed Meta Ads.
+
+Response format:
+- Direct answer
+- Confirmed from Meta
+- Not returned by Meta / cannot confirm
+- Performance context, if relevant
+- Recommended next step
 
 User question:
 ${question}
 
-Live setup context:
+Live setup context JSON:
 ${JSON.stringify(setupContext).slice(0, 45000)}
 
-Current AI review context:
+Current AI review context JSON:
 ${JSON.stringify(reviewContext).slice(0, 15000)}`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -90,9 +108,9 @@ ${JSON.stringify(reviewContext).slice(0, 15000)}`;
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model,
-      temperature: 0.2,
+      temperature: 0,
       messages: [
-        { role: 'system', content: 'You are a concise Meta Ads setup and performance strategist. You only provide advice. You never claim to make account changes.' },
+        { role: 'system', content: 'You answer only from provided Meta Ads data. Missing fields must be reported as not returned. Do not guess.' },
         { role: 'user', content: prompt }
       ]
     })
