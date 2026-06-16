@@ -1,3 +1,5 @@
+import { getMetaAdsAccountContext, getMetaAdsEnvStatus } from '../../../../lib/meta-ads/env';
+
 export const dynamic = 'force-dynamic';
 
 function safeString(value: unknown, fallback = ''): string {
@@ -6,8 +8,58 @@ function safeString(value: unknown, fallback = ''): string {
   try { return JSON.stringify(value); } catch { return fallback; }
 }
 
+function normalizeAdAccountId(value: string | null) {
+  if (!value) return null;
+  return value.startsWith('act_') ? value : `act_${value}`;
+}
+
+async function metaGet(path: string, params: Record<string, string>) {
+  const env = getMetaAdsEnvStatus();
+  const context = getMetaAdsAccountContext();
+  const token = process.env[env.requiredNames.accessToken];
+  const url = new URL(`https://graph.facebook.com/${context.apiVersion}/${path}`);
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  if (token) url.searchParams.set('access_token', token);
+  const response = await fetch(url.toString(), { cache: 'no-store' });
+  const json = await response.json().catch(() => ({}));
+  return { response, json };
+}
+
 function fallbackAnswer(question: string) {
-  return `I can see your question: "${question}". The AI chat needs OPENAI_API_KEY in Vercel before I can answer against the live review context.`;
+  return `I can see your question: "${question}". The AI chat needs OPENAI_API_KEY in Vercel before I can answer against the live Meta setup.`;
+}
+
+async function getLiveSetupContext(accountKey: string | null) {
+  const env = getMetaAdsEnvStatus();
+  const configured = normalizeAdAccountId(getMetaAdsAccountContext().adAccountId);
+  const selected = normalizeAdAccountId(accountKey);
+
+  if (!env.configured || !configured) return { ok: false, error: 'Meta ENV is not configured.' };
+  if (selected && selected !== configured && selected !== 'act_meta-connected-account') return { ok: false, error: 'Selected active account does not match connected Meta account.' };
+
+  const [account, campaigns, adSets, ads, insights] = await Promise.all([
+    metaGet(configured, { fields: 'id,name,account_status,currency,timezone_name' }),
+    metaGet(`${configured}/campaigns`, { fields: 'id,name,status,effective_status,objective,buying_type,daily_budget,lifetime_budget,bid_strategy', limit: '100' }),
+    metaGet(`${configured}/adsets`, { fields: 'id,name,campaign_id,campaign{name},status,effective_status,daily_budget,lifetime_budget,bid_strategy,billing_event,optimization_goal,destination_type,targeting,promoted_object', limit: '100' }),
+    metaGet(`${configured}/ads`, { fields: 'id,name,campaign_id,adset_id,status,effective_status,creative{id,name,title,body,object_story_spec,asset_feed_spec}', limit: '100' }),
+    metaGet(`${configured}/insights`, { fields: 'campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,spend,impressions,clicks,cpc,cpm,ctr,actions', level: 'ad', date_preset: 'last_30d', limit: '100' })
+  ]);
+
+  return {
+    ok: true,
+    account: account.json?.data || account.json,
+    campaigns: campaigns.json?.data || [],
+    adSets: adSets.json?.data || [],
+    ads: ads.json?.data || [],
+    adInsightsLast30d: insights.json?.data || [],
+    warnings: {
+      account: account.response.ok ? null : account.json?.error?.message,
+      campaigns: campaigns.response.ok ? null : campaigns.json?.error?.message,
+      adSets: adSets.response.ok ? null : adSets.json?.error?.message,
+      ads: ads.response.ok ? null : ads.json?.error?.message,
+      insights: insights.response.ok ? null : insights.json?.error?.message
+    }
+  };
 }
 
 export async function POST(request: Request) {
@@ -15,17 +67,23 @@ export async function POST(request: Request) {
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   const body = await request.json().catch(() => ({}));
   const question = safeString(body.question).trim();
-  const context = body.context || {};
+  const reviewContext = body.context || {};
+  const accountKey = safeString(body.accountKey || body.context?.adAccountId || body.context?.accountKey).trim();
 
-  if (!question) {
-    return Response.json({ ok: false, answer: 'Type a question or instruction first.' });
-  }
+  if (!question) return Response.json({ ok: false, answer: 'Type a question or instruction first.' });
+  if (!apiKey) return Response.json({ ok: true, aiConfigured: false, answer: fallbackAnswer(question) });
 
-  if (!apiKey) {
-    return Response.json({ ok: true, aiConfigured: false, answer: fallbackAnswer(question) });
-  }
+  const setupContext = await getLiveSetupContext(accountKey || null);
+  const prompt = `You are helping review a Meta Ads account inside DynLander. Answer the user's question using live setup fields and performance data. Be direct, practical, and read-only. Do not claim you changed Meta Ads. If the user asks about setup differences, compare campaign objective, ad set optimization, budgets, targeting, placements, creative, CTA, destination URL, and status before discussing performance metrics. Prioritize active campaigns, active ad sets, and active ads over paused history.
 
-  const prompt = `You are helping review a Meta Ads account inside DynLander. Answer the user's question using the current AI review context. Be direct, practical, and read-only. Do not claim you changed Meta Ads. If the user asks what to do, give clear next steps. Prioritize active campaigns, active ad sets, and active ads over paused history.\n\nUser question:\n${question}\n\nCurrent review context:\n${JSON.stringify(context).slice(0, 35000)}`;
+User question:
+${question}
+
+Live setup context:
+${JSON.stringify(setupContext).slice(0, 45000)}
+
+Current AI review context:
+${JSON.stringify(reviewContext).slice(0, 15000)}`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -34,16 +92,14 @@ export async function POST(request: Request) {
       model,
       temperature: 0.2,
       messages: [
-        { role: 'system', content: 'You are a concise Meta Ads performance strategist. You only provide advice. You never claim to make account changes.' },
+        { role: 'system', content: 'You are a concise Meta Ads setup and performance strategist. You only provide advice. You never claim to make account changes.' },
         { role: 'user', content: prompt }
       ]
     })
   });
 
   const json = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    return Response.json({ ok: false, aiConfigured: true, answer: json?.error?.message || 'AI chat request failed.' });
-  }
+  if (!response.ok) return Response.json({ ok: false, aiConfigured: true, answer: json?.error?.message || 'AI chat request failed.' });
 
   return Response.json({ ok: true, aiConfigured: true, answer: json?.choices?.[0]?.message?.content || 'No answer returned.' });
 }
