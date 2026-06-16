@@ -96,7 +96,14 @@ function rowResults(row: any) {
     .reduce((sum: number, action: any) => sum + Number(action.value || 0), 0);
 }
 
-function summarize(rows: any[]) {
+function deviceGroup(value: string | undefined) {
+  const device = String(value || 'unknown').toLowerCase();
+  if (device.includes('desktop')) return 'Desktop';
+  if (device === 'unknown' || device === 'other') return 'Other / Unknown';
+  return 'Mobile';
+}
+
+function summarizeNumbers(rows: any[]) {
   const spend = rows.reduce((sum, row) => sum + Number(row.spend || 0), 0);
   const impressions = rows.reduce((sum, row) => sum + Number(row.impressions || 0), 0);
   const clicks = rows.reduce((sum, row) => sum + Number(row.clicks || 0), 0);
@@ -104,7 +111,12 @@ function summarize(rows: any[]) {
   const ctr = impressions ? (clicks / impressions) * 100 : 0;
   const cpc = clicks ? spend / clicks : 0;
   const cpm = impressions ? (spend / impressions) * 1000 : 0;
-  return { spend: money(spend), results: numberText(results), impressions: numberText(impressions), clicks: numberText(clicks), ctr: percent(ctr), cpc: money(cpc), cpm: money(cpm) };
+  return { spend, impressions, clicks, results, ctr, cpc, cpm };
+}
+
+function summarize(rows: any[]) {
+  const totals = summarizeNumbers(rows);
+  return { spend: money(totals.spend), results: numberText(totals.results), impressions: numberText(totals.impressions), clicks: numberText(totals.clicks), ctr: percent(totals.ctr), cpc: money(totals.cpc), cpm: money(totals.cpm) };
 }
 
 function mapInsightRows(rows: any[], nameField: string, idField: string) {
@@ -125,6 +137,37 @@ function mapInsightRows(rows: any[], nameField: string, idField: string) {
   }));
 }
 
+function mapDeviceSummary(rows: any[]) {
+  const grouped = new Map<string, any[]>();
+  rows.forEach((row) => {
+    const group = deviceGroup(row.impression_device);
+    grouped.set(group, [...(grouped.get(group) || []), row]);
+  });
+
+  return ['Mobile', 'Desktop', 'Other / Unknown']
+    .filter((group) => grouped.has(group))
+    .map((group) => ({ device: group, ...summarize(grouped.get(group) || []) }));
+}
+
+function mapAdDeviceRows(rows: any[]) {
+  return rows.map((row) => ({
+    id: `${row.ad_id || 'unknown'}-${row.impression_device || 'unknown'}`,
+    device: deviceGroup(row.impression_device),
+    rawDevice: row.impression_device || '—',
+    adId: row.ad_id || '—',
+    adName: row.ad_name || '—',
+    adSetName: row.adset_name || '—',
+    campaignName: row.campaign_name || '—',
+    results: numberText(rowResults(row)),
+    spend: money(row.spend),
+    impressions: numberText(row.impressions),
+    clicks: numberText(row.clicks),
+    ctr: percent(row.ctr),
+    cpc: money(row.cpc),
+    cpm: money(row.cpm)
+  }));
+}
+
 export async function GET(request: Request) {
   const env = getMetaAdsEnvStatus();
   const context = getMetaAdsAccountContext();
@@ -135,27 +178,30 @@ export async function GET(request: Request) {
   const range = getRange(rangeKey, url.searchParams.get('start'), url.searchParams.get('end'));
 
   if (!env.configured || !configured) {
-    return Response.json({ ok: false, source: 'not_configured', error: 'Meta ENV is not configured.', range, summary: null, campaigns: [], adSets: [], ads: [] });
+    return Response.json({ ok: false, source: 'not_configured', error: 'Meta ENV is not configured.', range, summary: null, campaigns: [], adSets: [], ads: [], adDeviceSummary: [], adDeviceRows: [] });
   }
 
   if (selected && selected !== configured && selected !== 'act_meta-connected-account') {
-    return Response.json({ ok: false, source: 'active_account_mismatch', error: 'Selected active account does not match connected Meta account.', selected, configured, range, summary: null, campaigns: [], adSets: [], ads: [] });
+    return Response.json({ ok: false, source: 'active_account_mismatch', error: 'Selected active account does not match connected Meta account.', selected, configured, range, summary: null, campaigns: [], adSets: [], ads: [], adDeviceSummary: [], adDeviceRows: [] });
   }
 
   const params = { time_range: JSON.stringify({ since: range.since, until: range.until }), limit: '100' };
   const fields = 'spend,impressions,clicks,cpc,cpm,ctr,actions';
-  const [accountResult, campaignResult, adSetResult, adResult] = await Promise.all([
+  const adFields = `campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,${fields}`;
+  const [accountResult, campaignResult, adSetResult, adResult, adDeviceResult] = await Promise.all([
     metaGet(`${configured}/insights`, { ...params, fields }),
     metaGet(`${configured}/insights`, { ...params, level: 'campaign', fields: `campaign_id,campaign_name,${fields}` }),
     metaGet(`${configured}/insights`, { ...params, level: 'adset', fields: `campaign_id,campaign_name,adset_id,adset_name,${fields}` }),
-    metaGet(`${configured}/insights`, { ...params, level: 'ad', fields: `campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name,${fields}` })
+    metaGet(`${configured}/insights`, { ...params, level: 'ad', fields: adFields }),
+    metaGet(`${configured}/insights`, { ...params, level: 'ad', breakdowns: 'impression_device', fields: adFields })
   ]);
 
   if (!accountResult.response.ok) {
-    return Response.json({ ok: false, source: 'meta_dashboard_summary_failed', error: accountResult.json?.error?.message || 'Could not read Meta summary.', range, summary: null, campaigns: [], adSets: [], ads: [] });
+    return Response.json({ ok: false, source: 'meta_dashboard_summary_failed', error: accountResult.json?.error?.message || 'Could not read Meta summary.', range, summary: null, campaigns: [], adSets: [], ads: [], adDeviceSummary: [], adDeviceRows: [] });
   }
 
   const accountRows = accountResult.json?.data || [];
+  const adDeviceRows = adDeviceResult.response.ok ? adDeviceResult.json?.data || [] : [];
   return Response.json({
     ok: true,
     source: 'meta_dashboard_summary_active_account',
@@ -165,10 +211,13 @@ export async function GET(request: Request) {
     campaigns: mapInsightRows(campaignResult.json?.data || [], 'campaign_name', 'campaign_id'),
     adSets: mapInsightRows(adSetResult.json?.data || [], 'adset_name', 'adset_id'),
     ads: mapInsightRows(adResult.json?.data || [], 'ad_name', 'ad_id'),
+    adDeviceSummary: mapDeviceSummary(adDeviceRows),
+    adDeviceRows: mapAdDeviceRows(adDeviceRows),
     warnings: {
       campaigns: campaignResult.response.ok ? null : campaignResult.json?.error?.message || 'Could not read campaign rows.',
       adSets: adSetResult.response.ok ? null : adSetResult.json?.error?.message || 'Could not read ad set rows.',
-      ads: adResult.response.ok ? null : adResult.json?.error?.message || 'Could not read ad rows.'
+      ads: adResult.response.ok ? null : adResult.json?.error?.message || 'Could not read ad rows.',
+      adDeviceRows: adDeviceResult.response.ok ? null : adDeviceResult.json?.error?.message || 'Could not read ad device breakdown rows.'
     },
     checkedAt: new Date().toISOString()
   });
