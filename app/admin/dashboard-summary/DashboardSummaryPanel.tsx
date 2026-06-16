@@ -8,7 +8,9 @@ import { useActivePlatform } from '../_components/useActivePlatform';
 type RangeKey = 'today' | 'yesterday' | 'last_7d' | 'this_month' | 'last_month' | 'custom';
 type Summary = { spend: string; results: string; impressions: string; clicks: string; ctr: string; cpc: string; cpm: string };
 type Row = Summary & { id: string; name: string; campaignId?: string; campaignName?: string; adSetId?: string; adSetName?: string };
-type ApiData = { ok: boolean; source: string; error?: string; range?: { since: string; until: string; label: string }; summary: Summary | null; campaigns: Row[]; adSets: Row[]; ads: Row[]; checkedAt?: string; warnings?: Record<string, string | null> };
+type DeviceSummary = Summary & { device: string };
+type DeviceRow = Summary & { id: string; device: string; rawDevice: string; adId: string; adName: string; adSetName: string; campaignName: string };
+type ApiData = { ok: boolean; source: string; error?: string; range?: { since: string; until: string; label: string; timeZone?: string }; summary: Summary | null; campaigns: Row[]; adSets: Row[]; ads: Row[]; adDeviceSummary?: DeviceSummary[]; adDeviceRows?: DeviceRow[]; checkedAt?: string; warnings?: Record<string, string | null> };
 
 type SavedDateDefault = { range: RangeKey; start: string; end: string };
 const DATE_DEFAULT_STORAGE_KEY = 'dynalander.dashboardSummary.defaultDateRange';
@@ -52,6 +54,31 @@ function AdTable({ rows }: { rows: Row[] }) {
   );
 }
 
+function AdDeviceSummary({ summaryRows, detailRows, warning }: { summaryRows: DeviceSummary[]; detailRows: DeviceRow[]; warning?: string | null }) {
+  return (
+    <section style={cardStyle}>
+      <h2 style={{ marginTop: 0 }}>Ad summary by device</h2>
+      <p style={{ color: '#64748b' }}>Ad-level performance grouped by Meta impression device. Phones and tablets are grouped as Mobile. Desktop is shown separately.</p>
+      {warning ? <p style={{ color: '#9a3412', fontWeight: 800 }}>{warning}</p> : null}
+      <div style={gridStyle}>
+        {summaryRows.map((row) => (
+          <div key={`device-card-${row.device}`} style={cardStyle}>
+            <div style={{ color: '#64748b' }}>{row.device}</div>
+            <strong style={{ fontSize: 30 }}>{row.results}</strong>
+            <p style={{ marginBottom: 0, color: '#64748b' }}>Results</p>
+            <p style={{ marginBottom: 0 }}><strong>{row.spend}</strong> spend · {row.clicks} clicks · {row.ctr} CTR</p>
+          </div>
+        ))}
+      </div>
+      <table style={tableStyle}>
+        <thead><tr><th style={thTdStyle}>Device</th><th style={thTdStyle}>Ad</th><th style={thTdStyle}>Ad set</th><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Results</th><th style={thTdStyle}>Spend</th><th style={thTdStyle}>Impressions</th><th style={thTdStyle}>Clicks</th><th style={thTdStyle}>CTR</th><th style={thTdStyle}>CPC</th><th style={thTdStyle}>CPM</th></tr></thead>
+        <tbody>{detailRows.map((row) => <tr key={row.id}><td style={thTdStyle}>{row.device}<div style={{ color: '#64748b', fontSize: 12 }}>{row.rawDevice}</div></td><td style={thTdStyle}>{row.adName}</td><td style={thTdStyle}>{row.adSetName}</td><td style={thTdStyle}>{row.campaignName}</td><td style={thTdStyle}>{row.results}</td><td style={thTdStyle}>{row.spend}</td><td style={thTdStyle}>{row.impressions}</td><td style={thTdStyle}>{row.clicks}</td><td style={thTdStyle}>{row.ctr}</td><td style={thTdStyle}>{row.cpc}</td><td style={thTdStyle}>{row.cpm}</td></tr>)}</tbody>
+      </table>
+      {summaryRows.length === 0 ? <p style={{ color: '#64748b' }}>No mobile/desktop breakdown rows returned for the selected date range.</p> : null}
+    </section>
+  );
+}
+
 function dateDefaultLabel(saved: SavedDateDefault | null) {
   if (!saved) return 'No saved default yet.';
   if (saved.range === 'custom') return saved.start && saved.end ? `Saved default: Custom date, ${saved.start} to ${saved.end}` : 'Saved default: Custom date';
@@ -88,7 +115,7 @@ export default function DashboardSummaryPanel() {
       const response = await fetch(`/api/meta-ads/dashboard-summary?${params.toString()}`, { cache: 'no-store' });
       setData(await response.json());
     } catch {
-      setData({ ok: false, source: 'request_failed', error: 'Dashboard summary request failed.', summary: null, campaigns: [], adSets: [], ads: [] });
+      setData({ ok: false, source: 'request_failed', error: 'Dashboard summary request failed.', summary: null, campaigns: [], adSets: [], ads: [], adDeviceSummary: [], adDeviceRows: [] });
     } finally {
       setLoading(false);
     }
@@ -159,7 +186,7 @@ export default function DashboardSummaryPanel() {
         <h2 style={{ marginTop: 0 }}>Summary information</h2>
         <div style={twoColumnStyle}>
           <label style={labelStyle}>Date range<select style={inputStyle} value={range} onChange={(event) => setRange(event.target.value as RangeKey)}><option value="today">Today</option><option value="yesterday">Yesterday</option><option value="last_7d">Last 7 days</option><option value="this_month">This month</option><option value="last_month">Last month</option><option value="custom">Custom date</option></select></label>
-          {range === 'custom' ? <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label style={labelStyle}>Start<input style={inputStyle} type="date" value={start} onChange={(event) => setStart(event.target.value)} /></label><label style={labelStyle}>End<input style={inputStyle} type="date" value={end} onChange={(event) => setEnd(event.target.value)} /></label></div> : <div><strong>{data?.range?.label || 'Last 7 days'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{data?.range ? `${data.range.since} to ${data.range.until}` : 'Waiting for data.'}</p></div>}
+          {range === 'custom' ? <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}><label style={labelStyle}>Start<input style={inputStyle} type="date" value={start} onChange={(event) => setStart(event.target.value)} /></label><label style={labelStyle}>End<input style={inputStyle} type="date" value={end} onChange={(event) => setEnd(event.target.value)} /></label></div> : <div><strong>{data?.range?.label || 'Last 7 days'}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>{data?.range ? `${data.range.since} to ${data.range.until}` : 'Waiting for data.'}</p><p style={{ color: '#64748b', marginBottom: 0 }}>{data?.range?.timeZone || 'America/Chicago'}</p></div>}
         </div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center', marginTop: 12 }}>
           {range === 'custom' ? <button type="button" onClick={loadData} style={blueButtonStyle}>Apply custom date</button> : null}
@@ -178,6 +205,7 @@ export default function DashboardSummaryPanel() {
         <div style={cardStyle}><div style={{ color: '#64748b' }}>CPC / CPM</div><strong style={{ fontSize: 34 }}>{summary ? `${summary.cpc} / ${summary.cpm}` : '—'}</strong></div>
       </div>
 
+      <AdDeviceSummary summaryRows={data?.adDeviceSummary || []} detailRows={data?.adDeviceRows || []} warning={data?.warnings?.adDeviceRows} />
       <CampaignTable rows={data?.campaigns || []} />
       <AdSetTable rows={data?.adSets || []} />
       <AdTable rows={data?.ads || []} />
