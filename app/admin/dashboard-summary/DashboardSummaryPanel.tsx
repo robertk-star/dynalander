@@ -4,13 +4,16 @@ import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, inputStyle, labelStyle, tableStyle, thTdStyle, twoColumnStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
 import { useActivePlatform } from '../_components/useActivePlatform';
+import PlatformDetailsSection from './PlatformDetailsSection';
 
 type RangeKey = 'today' | 'yesterday' | 'last_7d' | 'this_month' | 'last_month' | 'custom';
 type Summary = { spend: string; results: string; impressions: string; clicks: string; ctr: string; cpc: string; cpm: string };
 type Row = Summary & { id: string; name: string; campaignId?: string; campaignName?: string; adSetId?: string; adSetName?: string };
 type DeviceSummary = Summary & { device: string };
 type DeviceRow = Summary & { id: string; device: string; rawDevice: string; adId: string; adName: string; adSetName: string; campaignName: string };
-type ApiData = { ok: boolean; source: string; error?: string; range?: { since: string; until: string; label: string; timeZone?: string }; summary: Summary | null; campaigns: Row[]; adSets: Row[]; ads: Row[]; adDeviceSummary?: DeviceSummary[]; adDeviceRows?: DeviceRow[]; checkedAt?: string; warnings?: Record<string, string | null> };
+type PlatformSummary = Summary & { platform: string; costPerResult: string };
+type PlatformRow = PlatformSummary & { id: string; rawPlatform: string; adName: string; adSetName: string; campaignName: string };
+type ApiData = { ok: boolean; source: string; error?: string; range?: { since: string; until: string; label: string; timeZone?: string }; summary: Summary | null; campaigns: Row[]; adSets: Row[]; ads: Row[]; adDeviceSummary?: DeviceSummary[]; adDeviceRows?: DeviceRow[]; platformSummary?: PlatformSummary[]; platformRows?: PlatformRow[]; checkedAt?: string; warnings?: Record<string, string | null> };
 
 type SavedDateDefault = { range: RangeKey; start: string; end: string };
 const DATE_DEFAULT_STORAGE_KEY = 'dynalander.dashboardSummary.defaultDateRange';
@@ -82,14 +85,7 @@ function AdDeviceSummary({ summaryRows, detailRows, warning }: { summaryRows: De
 function dateDefaultLabel(saved: SavedDateDefault | null) {
   if (!saved) return 'No saved default yet.';
   if (saved.range === 'custom') return saved.start && saved.end ? `Saved default: Custom date, ${saved.start} to ${saved.end}` : 'Saved default: Custom date';
-  const labels: Record<RangeKey, string> = {
-    today: 'Today',
-    yesterday: 'Yesterday',
-    last_7d: 'Last 7 days',
-    this_month: 'This month',
-    last_month: 'Last month',
-    custom: 'Custom date'
-  };
+  const labels: Record<RangeKey, string> = { today: 'Today', yesterday: 'Yesterday', last_7d: 'Last 7 days', this_month: 'This month', last_month: 'Last month', custom: 'Custom date' };
   return `Saved default: ${labels[saved.range]}`;
 }
 
@@ -115,7 +111,7 @@ export default function DashboardSummaryPanel() {
       const response = await fetch(`/api/meta-ads/dashboard-summary?${params.toString()}`, { cache: 'no-store' });
       setData(await response.json());
     } catch {
-      setData({ ok: false, source: 'request_failed', error: 'Dashboard summary request failed.', summary: null, campaigns: [], adSets: [], ads: [], adDeviceSummary: [], adDeviceRows: [] });
+      setData({ ok: false, source: 'request_failed', error: 'Dashboard summary request failed.', summary: null, campaigns: [], adSets: [], ads: [], adDeviceSummary: [], adDeviceRows: [], platformSummary: [], platformRows: [] });
     } finally {
       setLoading(false);
     }
@@ -126,7 +122,6 @@ export default function DashboardSummaryPanel() {
       setSaveMessage('Choose both a start and end date before saving custom as the default.');
       return;
     }
-
     const nextDefault = { range, start: range === 'custom' ? start : '', end: range === 'custom' ? end : '' };
     localStorage.setItem(DATE_DEFAULT_STORAGE_KEY, JSON.stringify(nextDefault));
     setSavedDateDefault(nextDefault);
@@ -174,9 +169,7 @@ export default function DashboardSummaryPanel() {
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center' }}>
           <div>
             <h2 style={{ marginTop: 0 }}>Connection and refresh status</h2>
-            <p style={{ color: data?.ok ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>
-              {data?.ok ? `Connected to ${selectedAccount.name}. Last refresh was ${lastRefresh ?? 0} min ago.` : data?.error || `Not connected for ${selectedAccount.name}.`}
-            </p>
+            <p style={{ color: data?.ok ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{data?.ok ? `Connected to ${selectedAccount.name}. Last refresh was ${lastRefresh ?? 0} min ago.` : data?.error || `Not connected for ${selectedAccount.name}.`}</p>
           </div>
           <button type="button" onClick={loadData} style={blueButtonStyle}>{loading ? 'Refreshing...' : 'Refresh summary'}</button>
         </div>
@@ -205,6 +198,7 @@ export default function DashboardSummaryPanel() {
         <div style={cardStyle}><div style={{ color: '#64748b' }}>CPC / CPM</div><strong style={{ fontSize: 34 }}>{summary ? `${summary.cpc} / ${summary.cpm}` : '—'}</strong></div>
       </div>
 
+      <PlatformDetailsSection summaryRows={data?.platformSummary || []} detailRows={data?.platformRows || []} warning={data?.warnings?.platformRows} />
       <AdDeviceSummary summaryRows={data?.adDeviceSummary || []} detailRows={data?.adDeviceRows || []} warning={data?.warnings?.adDeviceRows} />
       <CampaignTable rows={data?.campaigns || []} />
       <AdSetTable rows={data?.adSets || []} />
