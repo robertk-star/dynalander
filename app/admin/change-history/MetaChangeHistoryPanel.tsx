@@ -85,7 +85,7 @@ export default function MetaChangeHistoryPanel() {
       <section style={{ ...cardStyle, border: data?.ok ? '2px solid #0f766e' : '2px solid #f97316', background: data?.ok ? '#f0fdfa' : '#fff7ed' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
-            <h2 style={{ marginTop: 0 }}>Meta change history — Phase 1</h2>
+            <h2 style={{ marginTop: 0 }}>Meta change history — Phase 2</h2>
             <p style={{ color: data?.ok ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>
               {data?.ok ? `Tracking live setup snapshots for ${selectedAccount.name}.` : data?.error || 'Change history is not ready yet.'}
             </p>
@@ -93,6 +93,12 @@ export default function MetaChangeHistoryPanel() {
           <button type="button" onClick={takeSnapshot} style={blueButtonStyle}>{saving ? 'Taking snapshot...' : 'Take Meta Snapshot Now'}</button>
         </div>
         {snapshotResult ? <p style={{ color: snapshotResult.ok ? '#0f766e' : '#9a3412', fontWeight: 800 }}>{snapshotResult.ok ? `Snapshot saved. ${snapshotResult.snapshotsSaved || 0} items checked. ${snapshotResult.changesDetected || 0} changes detected.` : snapshotResult.error}</p> : null}
+      </section>
+
+      <section style={{ ...cardStyle, border: '2px solid #2563eb', background: '#eff6ff' }}>
+        <h2 style={{ marginTop: 0 }}>Automatic hourly snapshots</h2>
+        <p style={{ color: '#1d4ed8', fontWeight: 800, lineHeight: 1.6 }}>Vercel Cron is scheduled to run once per hour and take a read-only Meta setup snapshot.</p>
+        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Manual snapshots still work. Automatic snapshots begin after Vercel deploys this build. Times shown on this page are Central time.</p>
       </section>
 
       <div style={gridStyle}>
@@ -107,17 +113,7 @@ export default function MetaChangeHistoryPanel() {
         <h2 style={{ marginTop: 0 }}>Detected live Meta changes</h2>
         <table style={tableStyle}>
           <thead>
-            <tr>
-              <th style={thTdStyle}>Detected CDT</th>
-              <th style={thTdStyle}>Importance</th>
-              <th style={thTdStyle}>Level</th>
-              <th style={thTdStyle}>Item</th>
-              <th style={thTdStyle}>Campaign</th>
-              <th style={thTdStyle}>Ad set</th>
-              <th style={thTdStyle}>Field changed</th>
-              <th style={thTdStyle}>From</th>
-              <th style={thTdStyle}>To</th>
-            </tr>
+            <tr><th style={thTdStyle}>Detected CDT</th><th style={thTdStyle}>Importance</th><th style={thTdStyle}>Level</th><th style={thTdStyle}>Item</th><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Ad set</th><th style={thTdStyle}>Field changed</th><th style={thTdStyle}>From</th><th style={thTdStyle}>To</th></tr>
           </thead>
           <tbody>
             {changes.map((row) => (
@@ -139,9 +135,9 @@ export default function MetaChangeHistoryPanel() {
       </section>
 
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>How Phase 1 works</h2>
-        <p style={{ color: '#475569', lineHeight: 1.6 }}>Click “Take Meta Snapshot Now” to save the current setup for campaigns, ad sets, and ads. The next snapshot compares against the prior snapshot and creates from → to change rows.</p>
-        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Phase 1 is read-only. It does not change Meta. Phase 2 can add an hourly scheduled snapshot so this runs automatically.</p>
+        <h2 style={{ marginTop: 0 }}>How Phase 2 works</h2>
+        <p style={{ color: '#475569', lineHeight: 1.6 }}>Manual snapshots and hourly automatic snapshots both save the current setup for campaigns, ad sets, and ads. Each new snapshot compares against the prior snapshot and creates from → to change rows.</p>
+        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>This is read-only. It does not change Meta. Phase 3 can attach before/after performance windows to each detected change.</p>
       </section>
     </>
   );
