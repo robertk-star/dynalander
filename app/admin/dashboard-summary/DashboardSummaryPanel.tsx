@@ -198,11 +198,11 @@ export default function DashboardSummaryPanel() {
         <div style={cardStyle}><div style={{ color: '#64748b' }}>CPC / CPM</div><strong style={{ fontSize: 34 }}>{summary ? `${summary.cpc} / ${summary.cpm}` : '—'}</strong></div>
       </div>
 
-      <PlatformDetailsSection summaryRows={data?.platformSummary || []} detailRows={data?.platformRows || []} warning={data?.warnings?.platformRows} />
       <AdDeviceSummary summaryRows={data?.adDeviceSummary || []} detailRows={data?.adDeviceRows || []} warning={data?.warnings?.adDeviceRows} />
       <CampaignTable rows={data?.campaigns || []} />
       <AdSetTable rows={data?.adSets || []} />
       <AdTable rows={data?.ads || []} />
+      <PlatformDetailsSection summaryRows={data?.platformSummary || []} detailRows={data?.platformRows || []} warning={data?.warnings?.platformRows} />
     </>
   );
 }
