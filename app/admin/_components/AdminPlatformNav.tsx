@@ -31,11 +31,7 @@ export default function AdminPlatformNav() {
     <>
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: 'block', marginBottom: 6, color: '#64748b', fontSize: 12, fontWeight: 800 }}>Platform</label>
-        <select
-          style={{ width: '100%', borderRadius: 12, border: '1px solid #cbd5e1', padding: '10px 12px', fontWeight: 800 }}
-          value={platform}
-          onChange={(event) => setPlatform(event.target.value as AdPlatform)}
-        >
+        <select style={{ width: '100%', borderRadius: 12, border: '1px solid #cbd5e1', padding: '10px 12px', fontWeight: 800 }} value={platform} onChange={(event) => setPlatform(event.target.value as AdPlatform)}>
           <option value="google_ads">Google Ads</option>
           <option value="meta_ads">Facebook / Meta Ads</option>
         </select>
@@ -43,11 +39,7 @@ export default function AdminPlatformNav() {
       {isMeta ? (
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', marginBottom: 6, color: '#64748b', fontSize: 12, fontWeight: 800 }}>Meta Data Mode</label>
-          <select
-            style={{ width: '100%', borderRadius: 12, border: '1px solid #cbd5e1', padding: '10px 12px', fontWeight: 800 }}
-            value={mode}
-            onChange={(event) => setMode(event.target.value as MetaDataMode)}
-          >
+          <select style={{ width: '100%', borderRadius: 12, border: '1px solid #cbd5e1', padding: '10px 12px', fontWeight: 800 }} value={mode} onChange={(event) => setMode(event.target.value as MetaDataMode)}>
             <option value="live">Connected Live Meta Account</option>
             <option value="demo">Demo / Mock Meta Account</option>
           </select>
@@ -56,6 +48,7 @@ export default function AdminPlatformNav() {
       <AdminAccountSelector />
       <nav style={navStyle}>
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/dashboard-summary')} href="/admin/dashboard-summary">Dashboard Summary</a> : null}
+        {isMeta ? <a style={activeNavStyle(pathname, '/admin/meta-setup-details')} href="/admin/meta-setup-details">Setup Details</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/meta-ai-chat')} href="/admin/meta-ai-chat">AI Account Chat</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/ai-account-review')} href="/admin/ai-account-review">AI Account Review</a> : null}
         {isMeta ? <a style={activeNavStyle(pathname, '/admin/ad-reviewer')} href="/admin/ad-reviewer">Ad Reviewer</a> : null}
