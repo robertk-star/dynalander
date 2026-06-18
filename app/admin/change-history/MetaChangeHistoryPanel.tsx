@@ -16,6 +16,61 @@ function importanceStyle(value: string) { if (value === 'high') return { backgro
 function verdictStyle(value?: string) { if (value === 'Helped') return { background: '#dcfce7', color: '#166534', border: '1px solid #22c55e' }; if (value === 'Hurt') return { background: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' }; if (value === 'Keep watching') return { background: '#ffedd5', color: '#9a3412', border: '1px solid #f97316' }; return { background: '#e2e8f0', color: '#334155', border: '1px solid #94a3b8' }; }
 function unique(values: string[]) { return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b)); }
 
+function fieldLabel(field: string) {
+  const labels: Record<string, string> = {
+    creative_id: 'Creative version',
+    creative_name: 'Creative version name',
+    primary_text: 'Primary text',
+    headline: 'Headline',
+    description: 'Description',
+    cta: 'Call to action',
+    destination_url: 'Destination URL',
+    daily_budget: 'Daily budget',
+    lifetime_budget: 'Lifetime budget',
+    optimization_goal: 'Optimization goal',
+    billing_event: 'Billing event',
+    bid_strategy: 'Bid strategy',
+    effective_status: 'Effective status'
+  };
+  return labels[field] || field.replaceAll('_', ' ');
+}
+
+function cleanMetaName(value: string) {
+  if (!value) return 'Blank';
+  const withoutProductToken = value.replace(/\{\{product\.name\}\}/gi, 'Dynamic creative');
+  return withoutProductToken.length > 70 ? `${withoutProductToken.slice(0, 70)}...` : withoutProductToken;
+}
+
+function readableValue(field: string, value: string) {
+  if (!value) return 'Blank / not returned';
+  if (field === 'creative_id') return 'Creative version changed';
+  if (field === 'creative_name') return cleanMetaName(value);
+  if (value.length > 110) return `${value.slice(0, 110)}...`;
+  return value;
+}
+
+function changeSummary(row: LiveChange) {
+  if (row.field_name === 'creative_id') return 'The ad was switched to a different Meta creative version. This can happen even when the visible copy looks similar.';
+  if (row.field_name === 'creative_name') return 'The Meta creative version name changed. This is often a system-generated name and may not reflect a visible ad-copy change.';
+  return `${fieldLabel(row.field_name)} changed from “${readableValue(row.field_name, row.old_value)}” to “${readableValue(row.field_name, row.new_value)}”.`;
+}
+
+function ValueChangeCell({ row }: { row: LiveChange }) {
+  return (
+    <div style={{ minWidth: 260 }}>
+      <strong>{changeSummary(row)}</strong>
+      <div style={{ marginTop: 10, color: '#64748b' }}><strong>From:</strong> {readableValue(row.field_name, row.old_value)}</div>
+      <div style={{ color: '#64748b' }}><strong>To:</strong> {readableValue(row.field_name, row.new_value)}</div>
+      {(row.field_name === 'creative_id' || row.field_name === 'creative_name') ? (
+        <details style={{ marginTop: 8 }}>
+          <summary style={{ cursor: 'pointer', color: '#2563eb', fontWeight: 800 }}>Show raw Meta value</summary>
+          <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{`From: ${row.old_value || '—'}\nTo: ${row.new_value || '—'}`}</pre>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
 function VerdictCell({ row }: { row: LiveChange }) {
   const verdict = row.verdict || { verdict: 'Not enough data', reason: 'No verdict returned yet.' };
   return <div style={{ minWidth: 180 }}><span style={{ ...verdictStyle(verdict.verdict), borderRadius: 999, padding: '6px 10px', fontWeight: 900, display: 'inline-block' }}>{verdict.verdict}</span><p style={{ color: '#64748b', marginBottom: 0 }}>{verdict.reason}</p></div>;
@@ -69,15 +124,7 @@ export default function MetaChangeHistoryPanel() {
     }
   }
 
-  function clearFilters() {
-    setVerdictFilter('all');
-    setImportanceFilter('all');
-    setLevelFilter('all');
-    setFieldFilter('all');
-    setSearch('');
-    setHighOnly(false);
-  }
-
+  function clearFilters() { setVerdictFilter('all'); setImportanceFilter('all'); setLevelFilter('all'); setFieldFilter('all'); setSearch(''); setHighOnly(false); }
   useEffect(() => { loadHistory(); }, [accountId]);
 
   const changes = data?.changes || [];
@@ -92,7 +139,7 @@ export default function MetaChangeHistoryPanel() {
       if (levelFilter !== 'all' && row.entity_level !== levelFilter) return false;
       if (fieldFilter !== 'all' && row.field_name !== fieldFilter) return false;
       if (!term) return true;
-      const haystack = [row.entity_name, row.entity_id, row.parent_campaign_name, row.parent_ad_set_name, row.field_name, row.old_value, row.new_value, verdict].join(' ').toLowerCase();
+      const haystack = [row.entity_name, row.entity_id, row.parent_campaign_name, row.parent_ad_set_name, row.field_name, fieldLabel(row.field_name), row.old_value, row.new_value, verdict, changeSummary(row)].join(' ').toLowerCase();
       return haystack.includes(term);
     });
   }, [changes, verdictFilter, importanceFilter, levelFilter, fieldFilter, search, highOnly]);
@@ -107,10 +154,7 @@ export default function MetaChangeHistoryPanel() {
     <>
       <section style={{ ...cardStyle, border: data?.ok ? '2px solid #0f766e' : '2px solid #f97316', background: data?.ok ? '#f0fdfa' : '#fff7ed' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div>
-            <h2 style={{ marginTop: 0 }}>Meta change history — Phase 5</h2>
-            <p style={{ color: data?.ok ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{data?.ok ? `Tracking live setup snapshots for ${selectedAccount.name}.` : data?.error || 'Change history is not ready yet.'}</p>
-          </div>
+          <div><h2 style={{ marginTop: 0 }}>Meta change history — Phase 5</h2><p style={{ color: data?.ok ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{data?.ok ? `Tracking live setup snapshots for ${selectedAccount.name}.` : data?.error || 'Change history is not ready yet.'}</p></div>
           <button type="button" onClick={takeSnapshot} style={blueButtonStyle}>{saving ? 'Taking snapshot...' : 'Take Meta Snapshot Now'}</button>
         </div>
         {snapshotResult ? <p style={{ color: snapshotResult.ok ? '#0f766e' : '#9a3412', fontWeight: 800 }}>{snapshotResult.ok ? `Snapshot saved. ${snapshotResult.snapshotsSaved || 0} items checked. ${snapshotResult.changesDetected || 0} changes detected.` : snapshotResult.error}</p> : null}
@@ -118,19 +162,15 @@ export default function MetaChangeHistoryPanel() {
 
       <section style={{ ...cardStyle, border: '2px solid #2563eb', background: '#eff6ff' }}>
         <h2 style={{ marginTop: 0 }}>Change filters</h2>
-        <p style={{ color: '#1d4ed8', fontWeight: 800, lineHeight: 1.6 }}>Filter by verdict, importance, level, field changed, or search campaign/ad set/ad names.</p>
+        <p style={{ color: '#1d4ed8', fontWeight: 800, lineHeight: 1.6 }}>The change table now shows plain-English change summaries first. Raw Meta creative IDs and generated names are tucked away unless you open them.</p>
         <div style={gridStyle}>
           <label style={labelStyle}>Search<input style={inputStyle} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search campaign, ad set, ad, field, from/to..." /></label>
           <label style={labelStyle}>Verdict<select style={inputStyle} value={verdictFilter} onChange={(event) => setVerdictFilter(event.target.value)}><option value="all">All verdicts</option><option value="Helped">Helped</option><option value="Hurt">Hurt</option><option value="Keep watching">Keep watching</option><option value="Not enough data">Not enough data</option></select></label>
           <label style={labelStyle}>Importance<select style={inputStyle} value={importanceFilter} onChange={(event) => setImportanceFilter(event.target.value)}><option value="all">All importance</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
           <label style={labelStyle}>Level<select style={inputStyle} value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)}><option value="all">All levels</option><option value="campaign">Campaign</option><option value="ad_set">Ad set</option><option value="ad">Ad</option></select></label>
-          <label style={labelStyle}>Field changed<select style={inputStyle} value={fieldFilter} onChange={(event) => setFieldFilter(event.target.value)}><option value="all">All fields</option>{fieldOptions.map((field) => <option key={field} value={field}>{field}</option>)}</select></label>
+          <label style={labelStyle}>Field changed<select style={inputStyle} value={fieldFilter} onChange={(event) => setFieldFilter(event.target.value)}><option value="all">All fields</option>{fieldOptions.map((field) => <option key={field} value={field}>{fieldLabel(field)}</option>)}</select></label>
         </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 800, color: '#334155' }}><input type="checkbox" checked={highOnly} onChange={(event) => setHighOnly(event.target.checked)} /> High-impact only</label>
-          <button type="button" onClick={clearFilters} style={{ ...blueButtonStyle, background: '#334155' }}>Clear filters</button>
-          <strong>{filteredChanges.length} of {changes.length} changes shown</strong>
-        </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}><label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 800, color: '#334155' }}><input type="checkbox" checked={highOnly} onChange={(event) => setHighOnly(event.target.checked)} /> High-impact only</label><button type="button" onClick={clearFilters} style={{ ...blueButtonStyle, background: '#334155' }}>Clear filters</button><strong>{filteredChanges.length} of {changes.length} changes shown</strong></div>
       </section>
 
       <div style={gridStyle}>
@@ -146,32 +186,14 @@ export default function MetaChangeHistoryPanel() {
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Detected live Meta changes</h2>
         <table style={tableStyle}>
-          <thead><tr><th style={thTdStyle}>Detected CDT</th><th style={thTdStyle}>Verdict</th><th style={thTdStyle}>Importance</th><th style={thTdStyle}>Level</th><th style={thTdStyle}>Item</th><th style={thTdStyle}>Field changed</th><th style={thTdStyle}>From</th><th style={thTdStyle}>To</th><th style={thTdStyle}>Before / after performance</th></tr></thead>
-          <tbody>
-            {filteredChanges.map((row) => (
-              <tr key={row.id}>
-                <td style={thTdStyle}>{cdt(row.detected_at)}</td>
-                <td style={thTdStyle}><VerdictCell row={row} /></td>
-                <td style={thTdStyle}><span style={{ ...importanceStyle(row.change_importance), borderRadius: 999, padding: '6px 10px', fontWeight: 900 }}>{row.change_importance}</span></td>
-                <td style={thTdStyle}>{label(row.entity_level)}</td>
-                <td style={thTdStyle}>{row.entity_name || row.entity_id}<div style={{ color: '#64748b', fontSize: 12 }}>{row.parent_campaign_name || '—'} / {row.parent_ad_set_name || '—'}</div></td>
-                <td style={thTdStyle}>{row.field_name}</td>
-                <td style={thTdStyle}><pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{row.old_value || '—'}</pre></td>
-                <td style={thTdStyle}><pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{row.new_value || '—'}</pre></td>
-                <td style={thTdStyle}><PerformanceCell row={row} /></td>
-              </tr>
-            ))}
-          </tbody>
+          <thead><tr><th style={thTdStyle}>Detected CDT</th><th style={thTdStyle}>Verdict</th><th style={thTdStyle}>Importance</th><th style={thTdStyle}>Level</th><th style={thTdStyle}>Item</th><th style={thTdStyle}>Change summary</th><th style={thTdStyle}>Before / after performance</th></tr></thead>
+          <tbody>{filteredChanges.map((row) => <tr key={row.id}><td style={thTdStyle}>{cdt(row.detected_at)}</td><td style={thTdStyle}><VerdictCell row={row} /></td><td style={thTdStyle}><span style={{ ...importanceStyle(row.change_importance), borderRadius: 999, padding: '6px 10px', fontWeight: 900 }}>{row.change_importance}</span></td><td style={thTdStyle}>{label(row.entity_level)}</td><td style={thTdStyle}>{row.entity_name || row.entity_id}<div style={{ color: '#64748b', fontSize: 12 }}>{row.parent_campaign_name || '—'} / {row.parent_ad_set_name || '—'}</div></td><td style={thTdStyle}><ValueChangeCell row={row} /></td><td style={thTdStyle}><PerformanceCell row={row} /></td></tr>)}</tbody>
         </table>
         {!loading && changes.length === 0 ? <p style={{ color: '#64748b' }}>No live changes detected yet. Take one snapshot now, wait until something changes in Meta, then take another snapshot to compare from → to.</p> : null}
         {!loading && changes.length > 0 && filteredChanges.length === 0 ? <p style={{ color: '#64748b' }}>No changes match the current filters.</p> : null}
       </section>
 
-      <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>How Phase 5 works</h2>
-        <p style={{ color: '#475569', lineHeight: 1.6 }}>Use filters to quickly find high-impact changes, only helped or hurt verdicts, changes to a specific field, or a specific campaign/ad set/ad.</p>
-        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Phase 6 can add saved notes and manual review decisions for each change.</p>
-      </section>
+      <section style={cardStyle}><h2 style={{ marginTop: 0 }}>How Phase 5 works</h2><p style={{ color: '#475569', lineHeight: 1.6 }}>Use filters to quickly find high-impact changes, only helped or hurt verdicts, changes to a specific field, or a specific campaign/ad set/ad.</p><p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Raw Meta creative values are still available under “Show raw Meta value” when needed, but the main table now focuses on readable change summaries.</p></section>
     </>
   );
 }
