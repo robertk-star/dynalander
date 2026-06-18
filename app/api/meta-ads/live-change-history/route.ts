@@ -7,11 +7,7 @@ function normalizeAdAccountId(value: string | null) { if (!value) return null; r
 
 function chicagoDateParts(date: Date) {
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
-  return {
-    year: Number(parts.find((part) => part.type === 'year')?.value || '0'),
-    month: Number(parts.find((part) => part.type === 'month')?.value || '0'),
-    day: Number(parts.find((part) => part.type === 'day')?.value || '0')
-  };
+  return { year: Number(parts.find((part) => part.type === 'year')?.value || '0'), month: Number(parts.find((part) => part.type === 'month')?.value || '0'), day: Number(parts.find((part) => part.type === 'day')?.value || '0') };
 }
 
 function shiftDate(parts: { year: number; month: number; day: number }, days: number) {
@@ -19,16 +15,11 @@ function shiftDate(parts: { year: number; month: number; day: number }, days: nu
   return { year: date.getUTCFullYear(), month: date.getUTCMonth() + 1, day: date.getUTCDate() };
 }
 
-function dateText(parts: { year: number; month: number; day: number }) {
-  return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`;
-}
+function dateText(parts: { year: number; month: number; day: number }) { return `${parts.year}-${String(parts.month).padStart(2, '0')}-${String(parts.day).padStart(2, '0')}`; }
 
 function performanceRanges(detectedAt: string) {
   const detected = chicagoDateParts(new Date(detectedAt));
-  return {
-    before: { since: dateText(shiftDate(detected, -7)), until: dateText(shiftDate(detected, -1)) },
-    after: { since: dateText(shiftDate(detected, 1)), until: dateText(shiftDate(detected, 7)) }
-  };
+  return { before: { since: dateText(shiftDate(detected, -7)), until: dateText(shiftDate(detected, -1)) }, after: { since: dateText(shiftDate(detected, 1)), until: dateText(shiftDate(detected, 7)) } };
 }
 
 function leadCount(row: any) {
@@ -45,18 +36,25 @@ function summarize(row: any, range: { since: string; until: string }) {
   const impressions = Number(row?.impressions || 0);
   const clicks = Number(row?.clicks || 0);
   const results = leadCount(row);
-  return {
-    since: range.since,
-    until: range.until,
-    spend: money(spend),
-    results: numberText(results),
-    costPerResult: results ? money(spend / results) : '—',
-    impressions: numberText(impressions),
-    clicks: numberText(clicks),
-    ctr: percent(Number(row?.ctr || 0)),
-    cpc: money(Number(row?.cpc || 0)),
-    cpm: money(Number(row?.cpm || 0))
-  };
+  const costPerResultNumber = results ? spend / results : null;
+  return { since: range.since, until: range.until, spend: money(spend), spendNumber: spend, results: numberText(results), resultsNumber: results, costPerResult: costPerResultNumber === null ? '—' : money(costPerResultNumber), costPerResultNumber, impressions: numberText(impressions), clicks: numberText(clicks), clicksNumber: clicks, ctr: percent(Number(row?.ctr || 0)), ctrNumber: Number(row?.ctr || 0), cpc: money(Number(row?.cpc || 0)), cpm: money(Number(row?.cpm || 0)) };
+}
+
+function verdict(performance: any) {
+  const before = performance?.before;
+  const after = performance?.after;
+  if (!before || !after) return { verdict: 'Not enough data', reason: 'Performance window was not returned by Meta.' };
+  if (after.spendNumber === 0 && after.resultsNumber === 0 && after.clicksNumber === 0) return { verdict: 'Keep watching', reason: 'The after window does not have enough activity yet.' };
+  if (before.resultsNumber === 0 && after.resultsNumber > 0) return { verdict: 'Helped', reason: 'Leads appeared after the change when the before window had none.' };
+  if (before.resultsNumber > 0 && after.resultsNumber === 0 && after.spendNumber > 0) return { verdict: 'Hurt', reason: 'The after window spent money but produced no leads.' };
+  if (before.costPerResultNumber && after.costPerResultNumber) {
+    const improvement = (before.costPerResultNumber - after.costPerResultNumber) / before.costPerResultNumber;
+    const leadChange = after.resultsNumber - before.resultsNumber;
+    if (improvement >= 0.15 && leadChange >= 0) return { verdict: 'Helped', reason: 'Cost per lead improved by at least 15% and lead volume did not drop.' };
+    if (improvement <= -0.15 && after.spendNumber > 0) return { verdict: 'Hurt', reason: 'Cost per lead worsened by at least 15% after the change.' };
+  }
+  if (after.resultsNumber > before.resultsNumber && after.spendNumber >= before.spendNumber * 0.8) return { verdict: 'Helped', reason: 'Lead volume increased without a major spend drop.' };
+  return { verdict: 'Keep watching', reason: 'The before/after data is mixed or too close to call.' };
 }
 
 async function metaGet(path: string, params: Record<string, string>) {
@@ -74,17 +72,11 @@ async function metaGet(path: string, params: Record<string, string>) {
 async function readPerformance(entityId: string, detectedAt: string) {
   const ranges = performanceRanges(detectedAt);
   const fields = 'spend,impressions,clicks,cpc,cpm,ctr,actions';
-  const [beforeResult, afterResult] = await Promise.all([
-    metaGet(`${entityId}/insights`, { fields, time_range: JSON.stringify(ranges.before) }),
-    metaGet(`${entityId}/insights`, { fields, time_range: JSON.stringify(ranges.after) })
-  ]);
+  const [beforeResult, afterResult] = await Promise.all([metaGet(`${entityId}/insights`, { fields, time_range: JSON.stringify(ranges.before) }), metaGet(`${entityId}/insights`, { fields, time_range: JSON.stringify(ranges.after) })]);
   const beforeRow = beforeResult.json?.data?.[0] || null;
   const afterRow = afterResult.json?.data?.[0] || null;
-  return {
-    before: summarize(beforeRow, ranges.before),
-    after: summarize(afterRow, ranges.after),
-    warning: beforeResult.response.ok && afterResult.response.ok ? null : beforeResult.json?.error?.message || afterResult.json?.error?.message || 'Could not read performance window.'
-  };
+  const performance = { before: summarize(beforeRow, ranges.before), after: summarize(afterRow, ranges.after), warning: beforeResult.response.ok && afterResult.response.ok ? null : beforeResult.json?.error?.message || afterResult.json?.error?.message || 'Could not read performance window.' };
+  return { ...performance, verdict: verdict(performance) };
 }
 
 export async function GET(request: Request) {
@@ -110,14 +102,14 @@ export async function GET(request: Request) {
 
   const rows = changes || [];
   const withPerformance = await Promise.all(rows.map(async (row: any, index: number) => {
-    if (index >= 20) return { ...row, performance: null, performanceWarning: 'Performance window shown for the 20 most recent changes only.' };
+    if (index >= 20) return { ...row, performance: null, performanceWarning: 'Performance window shown for the 20 most recent changes only.', verdict: { verdict: 'Not enough data', reason: 'Performance window not loaded for this older change.' } };
     try {
       const performance = await readPerformance(row.entity_id, row.detected_at);
-      return { ...row, performance };
+      return { ...row, performance, verdict: performance.verdict };
     } catch (performanceError: any) {
-      return { ...row, performance: null, performanceWarning: performanceError?.message || 'Could not read performance window.' };
+      return { ...row, performance: null, performanceWarning: performanceError?.message || 'Could not read performance window.', verdict: { verdict: 'Not enough data', reason: performanceError?.message || 'Could not read performance window.' } };
     }
   }));
 
-  return Response.json({ ok: true, source: 'live_meta_change_history_phase_3', changes: withPerformance, snapshotCount: count || 0, lastSnapshotAt: latest?.[0]?.snapshot_at || null });
+  return Response.json({ ok: true, source: 'live_meta_change_history_phase_4', changes: withPerformance, snapshotCount: count || 0, lastSnapshotAt: latest?.[0]?.snapshot_at || null });
 }
