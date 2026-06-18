@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
+import { useEffect, useMemo, useState } from 'react';
+import { blueButtonStyle, cardStyle, gridStyle, inputStyle, labelStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
 
 type PerformanceWindow = { since: string; until: string; spend: string; results: string; costPerResult: string; impressions: string; clicks: string; ctr: string; cpc: string; cpm: string };
@@ -14,6 +14,7 @@ function cdt(value?: string | null) { if (!value) return '—'; return new Intl.
 function label(level: string) { if (level === 'ad_set') return 'Ad set'; if (level === 'campaign') return 'Campaign'; return 'Ad'; }
 function importanceStyle(value: string) { if (value === 'high') return { background: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' }; if (value === 'medium') return { background: '#ffedd5', color: '#9a3412', border: '1px solid #f97316' }; return { background: '#dcfce7', color: '#166534', border: '1px solid #22c55e' }; }
 function verdictStyle(value?: string) { if (value === 'Helped') return { background: '#dcfce7', color: '#166534', border: '1px solid #22c55e' }; if (value === 'Hurt') return { background: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' }; if (value === 'Keep watching') return { background: '#ffedd5', color: '#9a3412', border: '1px solid #f97316' }; return { background: '#e2e8f0', color: '#334155', border: '1px solid #94a3b8' }; }
+function unique(values: string[]) { return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b)); }
 
 function VerdictCell({ row }: { row: LiveChange }) {
   const verdict = row.verdict || { verdict: 'Not enough data', reason: 'No verdict returned yet.' };
@@ -38,6 +39,12 @@ export default function MetaChangeHistoryPanel() {
   const [snapshotResult, setSnapshotResult] = useState<SnapshotResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [verdictFilter, setVerdictFilter] = useState('all');
+  const [importanceFilter, setImportanceFilter] = useState('all');
+  const [levelFilter, setLevelFilter] = useState('all');
+  const [fieldFilter, setFieldFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [highOnly, setHighOnly] = useState(false);
 
   async function loadHistory() {
     setLoading(true);
@@ -62,9 +69,34 @@ export default function MetaChangeHistoryPanel() {
     }
   }
 
+  function clearFilters() {
+    setVerdictFilter('all');
+    setImportanceFilter('all');
+    setLevelFilter('all');
+    setFieldFilter('all');
+    setSearch('');
+    setHighOnly(false);
+  }
+
   useEffect(() => { loadHistory(); }, [accountId]);
 
   const changes = data?.changes || [];
+  const fieldOptions = useMemo(() => unique(changes.map((row) => row.field_name)), [changes]);
+  const filteredChanges = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return changes.filter((row) => {
+      const verdict = row.verdict?.verdict || 'Not enough data';
+      if (verdictFilter !== 'all' && verdict !== verdictFilter) return false;
+      if (importanceFilter !== 'all' && row.change_importance !== importanceFilter) return false;
+      if (highOnly && row.change_importance !== 'high') return false;
+      if (levelFilter !== 'all' && row.entity_level !== levelFilter) return false;
+      if (fieldFilter !== 'all' && row.field_name !== fieldFilter) return false;
+      if (!term) return true;
+      const haystack = [row.entity_name, row.entity_id, row.parent_campaign_name, row.parent_ad_set_name, row.field_name, row.old_value, row.new_value, verdict].join(' ').toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [changes, verdictFilter, importanceFilter, levelFilter, fieldFilter, search, highOnly]);
+
   const highCount = changes.filter((row) => row.change_importance === 'high').length;
   const helpedCount = changes.filter((row) => row.verdict?.verdict === 'Helped').length;
   const hurtCount = changes.filter((row) => row.verdict?.verdict === 'Hurt').length;
@@ -76,7 +108,7 @@ export default function MetaChangeHistoryPanel() {
       <section style={{ ...cardStyle, border: data?.ok ? '2px solid #0f766e' : '2px solid #f97316', background: data?.ok ? '#f0fdfa' : '#fff7ed' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
-            <h2 style={{ marginTop: 0 }}>Meta change history — Phase 4</h2>
+            <h2 style={{ marginTop: 0 }}>Meta change history — Phase 5</h2>
             <p style={{ color: data?.ok ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{data?.ok ? `Tracking live setup snapshots for ${selectedAccount.name}.` : data?.error || 'Change history is not ready yet.'}</p>
           </div>
           <button type="button" onClick={takeSnapshot} style={blueButtonStyle}>{saving ? 'Taking snapshot...' : 'Take Meta Snapshot Now'}</button>
@@ -85,13 +117,25 @@ export default function MetaChangeHistoryPanel() {
       </section>
 
       <section style={{ ...cardStyle, border: '2px solid #2563eb', background: '#eff6ff' }}>
-        <h2 style={{ marginTop: 0 }}>Change verdicts</h2>
-        <p style={{ color: '#1d4ed8', fontWeight: 800, lineHeight: 1.6 }}>Each recent change is labeled Helped, Hurt, Keep watching, or Not enough data using the before/after performance window.</p>
-        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>This is a read-only decision aid. For very recent changes, the after window may not have enough data yet.</p>
+        <h2 style={{ marginTop: 0 }}>Change filters</h2>
+        <p style={{ color: '#1d4ed8', fontWeight: 800, lineHeight: 1.6 }}>Filter by verdict, importance, level, field changed, or search campaign/ad set/ad names.</p>
+        <div style={gridStyle}>
+          <label style={labelStyle}>Search<input style={inputStyle} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search campaign, ad set, ad, field, from/to..." /></label>
+          <label style={labelStyle}>Verdict<select style={inputStyle} value={verdictFilter} onChange={(event) => setVerdictFilter(event.target.value)}><option value="all">All verdicts</option><option value="Helped">Helped</option><option value="Hurt">Hurt</option><option value="Keep watching">Keep watching</option><option value="Not enough data">Not enough data</option></select></label>
+          <label style={labelStyle}>Importance<select style={inputStyle} value={importanceFilter} onChange={(event) => setImportanceFilter(event.target.value)}><option value="all">All importance</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+          <label style={labelStyle}>Level<select style={inputStyle} value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)}><option value="all">All levels</option><option value="campaign">Campaign</option><option value="ad_set">Ad set</option><option value="ad">Ad</option></select></label>
+          <label style={labelStyle}>Field changed<select style={inputStyle} value={fieldFilter} onChange={(event) => setFieldFilter(event.target.value)}><option value="all">All fields</option>{fieldOptions.map((field) => <option key={field} value={field}>{field}</option>)}</select></label>
+        </div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontWeight: 800, color: '#334155' }}><input type="checkbox" checked={highOnly} onChange={(event) => setHighOnly(event.target.checked)} /> High-impact only</label>
+          <button type="button" onClick={clearFilters} style={{ ...blueButtonStyle, background: '#334155' }}>Clear filters</button>
+          <strong>{filteredChanges.length} of {changes.length} changes shown</strong>
+        </div>
       </section>
 
       <div style={gridStyle}>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Changes detected</div><strong style={{ fontSize: 28 }}>{changes.length}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Compared latest snapshot to prior snapshot.</p></div>
+        <div style={cardStyle}><div style={{ color: '#64748b' }}>Filtered shown</div><strong style={{ fontSize: 28 }}>{filteredChanges.length}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Current rows after filters.</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Helped / Hurt</div><strong style={{ fontSize: 28 }}>{helpedCount} / {hurtCount}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Verdict based on before/after performance.</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Keep watching</div><strong style={{ fontSize: 28 }}>{watchCount}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Not enough time or mixed signal.</p></div>
         <div style={cardStyle}><div style={{ color: '#64748b' }}>Not enough data</div><strong style={{ fontSize: 28 }}>{notEnoughCount}</strong><p style={{ color: '#64748b', marginBottom: 0 }}>Meta did not return enough data.</p></div>
@@ -104,7 +148,7 @@ export default function MetaChangeHistoryPanel() {
         <table style={tableStyle}>
           <thead><tr><th style={thTdStyle}>Detected CDT</th><th style={thTdStyle}>Verdict</th><th style={thTdStyle}>Importance</th><th style={thTdStyle}>Level</th><th style={thTdStyle}>Item</th><th style={thTdStyle}>Field changed</th><th style={thTdStyle}>From</th><th style={thTdStyle}>To</th><th style={thTdStyle}>Before / after performance</th></tr></thead>
           <tbody>
-            {changes.map((row) => (
+            {filteredChanges.map((row) => (
               <tr key={row.id}>
                 <td style={thTdStyle}>{cdt(row.detected_at)}</td>
                 <td style={thTdStyle}><VerdictCell row={row} /></td>
@@ -120,12 +164,13 @@ export default function MetaChangeHistoryPanel() {
           </tbody>
         </table>
         {!loading && changes.length === 0 ? <p style={{ color: '#64748b' }}>No live changes detected yet. Take one snapshot now, wait until something changes in Meta, then take another snapshot to compare from → to.</p> : null}
+        {!loading && changes.length > 0 && filteredChanges.length === 0 ? <p style={{ color: '#64748b' }}>No changes match the current filters.</p> : null}
       </section>
 
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>How Phase 4 works</h2>
-        <p style={{ color: '#475569', lineHeight: 1.6 }}>DynLander compares the before and after window around each change. Better lead volume or lower cost per lead can be labeled Helped. Worse cost per lead or spend with no leads can be labeled Hurt.</p>
-        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Phase 5 can add filters for verdict, field changed, campaign, ad set, and high-impact only.</p>
+        <h2 style={{ marginTop: 0 }}>How Phase 5 works</h2>
+        <p style={{ color: '#475569', lineHeight: 1.6 }}>Use filters to quickly find high-impact changes, only helped or hurt verdicts, changes to a specific field, or a specific campaign/ad set/ad.</p>
+        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Phase 6 can add saved notes and manual review decisions for each change.</p>
       </section>
     </>
   );
