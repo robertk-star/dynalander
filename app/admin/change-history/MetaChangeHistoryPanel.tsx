@@ -4,38 +4,25 @@ import { useEffect, useState } from 'react';
 import { blueButtonStyle, cardStyle, gridStyle, tableStyle, thTdStyle } from '../_components/adminStyles';
 import { useActiveAccount } from '../_components/useActiveAccount';
 
-type LiveChange = {
-  id: string;
-  entity_level: 'campaign' | 'ad_set' | 'ad';
-  entity_id: string;
-  entity_name: string;
-  parent_campaign_name?: string;
-  parent_ad_set_name?: string;
-  field_name: string;
-  old_value: string;
-  new_value: string;
-  change_importance: 'high' | 'medium' | 'low';
-  detected_at: string;
-};
-
+type PerformanceWindow = { since: string; until: string; spend: string; results: string; costPerResult: string; impressions: string; clicks: string; ctr: string; cpc: string; cpm: string };
+type LiveChange = { id: string; entity_level: 'campaign' | 'ad_set' | 'ad'; entity_id: string; entity_name: string; parent_campaign_name?: string; parent_ad_set_name?: string; field_name: string; old_value: string; new_value: string; change_importance: 'high' | 'medium' | 'low'; detected_at: string; performance?: { before: PerformanceWindow; after: PerformanceWindow; warning?: string | null } | null; performanceWarning?: string };
 type HistoryResponse = { ok: boolean; error?: string; changes: LiveChange[]; snapshotCount: number; lastSnapshotAt: string | null };
 type SnapshotResponse = { ok: boolean; error?: string; snapshotsSaved?: number; changesDetected?: number; snapshotRunId?: string };
 
-function cdt(value?: string | null) {
-  if (!value) return '—';
-  return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
-}
+function cdt(value?: string | null) { if (!value) return '—'; return new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)); }
+function label(level: string) { if (level === 'ad_set') return 'Ad set'; if (level === 'campaign') return 'Campaign'; return 'Ad'; }
+function importanceStyle(value: string) { if (value === 'high') return { background: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' }; if (value === 'medium') return { background: '#ffedd5', color: '#9a3412', border: '1px solid #f97316' }; return { background: '#dcfce7', color: '#166534', border: '1px solid #22c55e' }; }
 
-function label(level: string) {
-  if (level === 'ad_set') return 'Ad set';
-  if (level === 'campaign') return 'Campaign';
-  return 'Ad';
-}
-
-function importanceStyle(value: string) {
-  if (value === 'high') return { background: '#fee2e2', color: '#991b1b', border: '1px solid #ef4444' };
-  if (value === 'medium') return { background: '#ffedd5', color: '#9a3412', border: '1px solid #f97316' };
-  return { background: '#dcfce7', color: '#166534', border: '1px solid #22c55e' };
+function PerformanceCell({ row }: { row: LiveChange }) {
+  const perf = row.performance;
+  if (!perf) return <span style={{ color: '#64748b' }}>{row.performanceWarning || 'Not loaded'}</span>;
+  return (
+    <div style={{ display: 'grid', gap: 8, minWidth: 320 }}>
+      <div><strong>Before</strong> <span style={{ color: '#64748b' }}>{perf.before.since} to {perf.before.until}</span><br />{perf.before.results} leads · {perf.before.spend} spend · {perf.before.costPerResult} CPL · {perf.before.ctr} CTR</div>
+      <div><strong>After</strong> <span style={{ color: '#64748b' }}>{perf.after.since} to {perf.after.until}</span><br />{perf.after.results} leads · {perf.after.spend} spend · {perf.after.costPerResult} CPL · {perf.after.ctr} CTR</div>
+      {perf.warning ? <div style={{ color: '#9a3412', fontWeight: 800 }}>{perf.warning}</div> : null}
+    </div>
+  );
 }
 
 export default function MetaChangeHistoryPanel() {
@@ -59,11 +46,7 @@ export default function MetaChangeHistoryPanel() {
     setSaving(true);
     setSnapshotResult(null);
     try {
-      const response = await fetch('/api/meta-ads/live-snapshot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountKey: accountId })
-      });
+      const response = await fetch('/api/meta-ads/live-snapshot', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accountKey: accountId }) });
       const result = await response.json();
       setSnapshotResult(result);
       await loadHistory();
@@ -85,10 +68,8 @@ export default function MetaChangeHistoryPanel() {
       <section style={{ ...cardStyle, border: data?.ok ? '2px solid #0f766e' : '2px solid #f97316', background: data?.ok ? '#f0fdfa' : '#fff7ed' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
-            <h2 style={{ marginTop: 0 }}>Meta change history — Phase 2</h2>
-            <p style={{ color: data?.ok ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>
-              {data?.ok ? `Tracking live setup snapshots for ${selectedAccount.name}.` : data?.error || 'Change history is not ready yet.'}
-            </p>
+            <h2 style={{ marginTop: 0 }}>Meta change history — Phase 3</h2>
+            <p style={{ color: data?.ok ? '#0f766e' : '#9a3412', fontWeight: 800, lineHeight: 1.6, marginBottom: 0 }}>{data?.ok ? `Tracking live setup snapshots for ${selectedAccount.name}.` : data?.error || 'Change history is not ready yet.'}</p>
           </div>
           <button type="button" onClick={takeSnapshot} style={blueButtonStyle}>{saving ? 'Taking snapshot...' : 'Take Meta Snapshot Now'}</button>
         </div>
@@ -96,9 +77,9 @@ export default function MetaChangeHistoryPanel() {
       </section>
 
       <section style={{ ...cardStyle, border: '2px solid #2563eb', background: '#eff6ff' }}>
-        <h2 style={{ marginTop: 0 }}>Automatic hourly snapshots</h2>
-        <p style={{ color: '#1d4ed8', fontWeight: 800, lineHeight: 1.6 }}>Vercel Cron is scheduled to run once per hour and take a read-only Meta setup snapshot.</p>
-        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Manual snapshots still work. Automatic snapshots begin after Vercel deploys this build. Times shown on this page are Central time.</p>
+        <h2 style={{ marginTop: 0 }}>Before / after performance</h2>
+        <p style={{ color: '#1d4ed8', fontWeight: 800, lineHeight: 1.6 }}>Each recent change now includes a 7-day before and 7-day after performance window when Meta returns the data.</p>
+        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>For changes detected today, the after window may be empty until enough days pass.</p>
       </section>
 
       <div style={gridStyle}>
@@ -112,21 +93,18 @@ export default function MetaChangeHistoryPanel() {
       <section style={cardStyle}>
         <h2 style={{ marginTop: 0 }}>Detected live Meta changes</h2>
         <table style={tableStyle}>
-          <thead>
-            <tr><th style={thTdStyle}>Detected CDT</th><th style={thTdStyle}>Importance</th><th style={thTdStyle}>Level</th><th style={thTdStyle}>Item</th><th style={thTdStyle}>Campaign</th><th style={thTdStyle}>Ad set</th><th style={thTdStyle}>Field changed</th><th style={thTdStyle}>From</th><th style={thTdStyle}>To</th></tr>
-          </thead>
+          <thead><tr><th style={thTdStyle}>Detected CDT</th><th style={thTdStyle}>Importance</th><th style={thTdStyle}>Level</th><th style={thTdStyle}>Item</th><th style={thTdStyle}>Field changed</th><th style={thTdStyle}>From</th><th style={thTdStyle}>To</th><th style={thTdStyle}>Before / after performance</th></tr></thead>
           <tbody>
             {changes.map((row) => (
               <tr key={row.id}>
                 <td style={thTdStyle}>{cdt(row.detected_at)}</td>
                 <td style={thTdStyle}><span style={{ ...importanceStyle(row.change_importance), borderRadius: 999, padding: '6px 10px', fontWeight: 900 }}>{row.change_importance}</span></td>
                 <td style={thTdStyle}>{label(row.entity_level)}</td>
-                <td style={thTdStyle}>{row.entity_name || row.entity_id}<div style={{ color: '#64748b', fontSize: 12 }}>{row.entity_id}</div></td>
-                <td style={thTdStyle}>{row.parent_campaign_name || '—'}</td>
-                <td style={thTdStyle}>{row.parent_ad_set_name || '—'}</td>
+                <td style={thTdStyle}>{row.entity_name || row.entity_id}<div style={{ color: '#64748b', fontSize: 12 }}>{row.parent_campaign_name || '—'} / {row.parent_ad_set_name || '—'}</div></td>
                 <td style={thTdStyle}>{row.field_name}</td>
                 <td style={thTdStyle}><pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{row.old_value || '—'}</pre></td>
                 <td style={thTdStyle}><pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{row.new_value || '—'}</pre></td>
+                <td style={thTdStyle}><PerformanceCell row={row} /></td>
               </tr>
             ))}
           </tbody>
@@ -135,9 +113,9 @@ export default function MetaChangeHistoryPanel() {
       </section>
 
       <section style={cardStyle}>
-        <h2 style={{ marginTop: 0 }}>How Phase 2 works</h2>
-        <p style={{ color: '#475569', lineHeight: 1.6 }}>Manual snapshots and hourly automatic snapshots both save the current setup for campaigns, ad sets, and ads. Each new snapshot compares against the prior snapshot and creates from → to change rows.</p>
-        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>This is read-only. It does not change Meta. Phase 3 can attach before/after performance windows to each detected change.</p>
+        <h2 style={{ marginTop: 0 }}>How Phase 3 works</h2>
+        <p style={{ color: '#475569', lineHeight: 1.6 }}>DynLander saves live setup snapshots, detects from → to changes, then asks Meta for performance 7 days before and 7 days after the detected change.</p>
+        <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>This is read-only. Phase 4 can add an AI verdict like helped, hurt, or keep watching.</p>
       </section>
     </>
   );
