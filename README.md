@@ -121,3 +121,24 @@ AI credentials are still not needed yet.
 ## SQL migration needed
 
 No new SQL for Phase 7.3. Use the existing two migration files.
+
+## Admin and API authentication
+
+All admin pages and internal APIs are protected by `middleware.ts` (helpers in `lib/auth/adminAuth.ts`). Every check fails closed if its env var is missing.
+
+| Path | Access |
+| --- | --- |
+| `/`, `/sell`, `/thank-you`, `/api/health` | Public |
+| `/admin/login` | Public login form (posts to `/api/auth/login`) |
+| `/admin/*` | Admin session cookie, else redirect to `/admin/login` |
+| `/api/admin/*`, `/api/google-ads/*`, `/api/health/*` | Admin session cookie, else 401 |
+| `/api/meta-ads/*` | Admin session cookie, or `x-api-key: $META_ADS_READ_KEY` (GET/HEAD, plus POST `ai-review-chat`), or the cron bearer token |
+| `/api/cron/*` | `Authorization: Bearer $CRON_SECRET` only (Vercel Cron standard) |
+
+Environment variables (Production + Preview): `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET` (signs the 7-day httpOnly `dynlander_admin_session` cookie), `META_ADS_READ_KEY`, `CRON_SECRET`.
+
+Server-to-server read example:
+
+```bash
+curl -H "x-api-key: $META_ADS_READ_KEY" https://dynlander.ardykay.com/api/meta-ads/status
+```

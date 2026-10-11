@@ -80,6 +80,9 @@ export default function AdminShell({
           </div>
         </div>
         <AdminPlatformNav />
+        <form method="post" action="/api/auth/logout" style={{ marginTop: 16 }}>
+          <button type="submit" style={{ background: 'transparent', border: '1px solid currentColor', borderRadius: 8, padding: '6px 12px', color: 'inherit', cursor: 'pointer', fontSize: 13, opacity: 0.8 }}>Sign out</button>
+        </form>
       </aside>
       <main className="dl-admin-main" style={mainStyle}>
         <div className="dl-admin-top" style={topStyle}>
